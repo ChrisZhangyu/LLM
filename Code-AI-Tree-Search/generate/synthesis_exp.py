@@ -63,6 +63,7 @@ def main():
 
     if args.load_value is not None:
         print(f"Loading value model {args.load_value}")
+        # 用于生成价值的模型
         value_model = transformers.GPT2ForSequenceClassification.from_pretrained(args.load_value)
         print("Value model loaded.")
     else:

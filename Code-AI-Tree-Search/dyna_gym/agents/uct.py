@@ -32,6 +32,7 @@ class UCT(object):
         if type(action_space) == spaces.discrete.Discrete:
             self.action_space = list(mcts.combinations(action_space))
         else:
+            # uct_exp方法里这个变量是空列表
             self.action_space = action_space
         self.n_actions = len(self.action_space)
         self.rollouts = rollouts

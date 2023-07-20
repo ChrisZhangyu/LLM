@@ -45,9 +45,10 @@ class ProgramEnv(ABC):
             done = False
 
         if done:
+            # 生成下一个状态并计算奖励
             reward = self.get_reward(next_state)
         else:
-            reward = 0  # no intermediate reward
+            reward = 0  # no intermediate reward，没有即时奖励
 
         return next_state, reward, done
 
@@ -127,6 +128,7 @@ class APPSProgramEnv(ProgramEnv):
     def get_canonical_state(self):
         raise NotImplementedError()
 
+    # 根据当前的state计算奖励值
     def get_reward(self, s, mode='train'):
         """
         Returns:

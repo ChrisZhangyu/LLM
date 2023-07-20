@@ -26,6 +26,7 @@ def check_correctness(prob_path, output_str, mode, public_test_cases):
     p = multiprocessing.Process(target=_temp_run, args=(prob_path, output_str, mode, public_test_cases, result))
     p.start()
     p.join(timeout=10)
+    # 这里可以捕获异常，加入reflexion的方法
     if p.is_alive():
         p.kill()
     if not result:
@@ -44,6 +45,7 @@ def compute_reward(prob_path, output_str, mode='train', public_test_cases=None, 
     """
     # from https://github.com/hendrycks/apps/blob/83d925041b1c43c32b56d444bb315f729f4ff633/eval/test_one_solution.py#L141
     try:
+        # 检查正确性，通过直接运行代码
         curr_res = check_correctness(prob_path, output_str, mode, public_test_cases)
         fixed = []
         for e in curr_res:
@@ -61,8 +63,9 @@ def compute_reward(prob_path, output_str, mode='train', public_test_cases=None, 
 
     # How to read results [-2] = compile error, [-1] = runtime error [False] = failed test case [True] = passed test case")
     assert isinstance(curr_res, list)
+    # 计算测试用例的通过率
     pass_rate = np.mean(np.asarray(curr_res) > 0) if len(curr_res) > 0 else 0
-
+    # 计算编译错误和运行时错误的比例
     if return_info:
         info = {"compile_error": curr_res.count(-2) / len(curr_res),
                 "runtime_error": curr_res.count(-1) / len(curr_res)}

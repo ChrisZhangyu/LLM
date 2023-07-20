@@ -14,8 +14,8 @@ def uct_exp(args, env, dp, log_loc, start):
     Run TG-MCTS
     """
     agent = UCT(
-        action_space=[], # this will not be used as we have a default policy
-        gamma=1., # no discounting
+        action_space=[],  # this will not be used as we have a default policy
+        gamma=1.,  # no discounting
         ucb_constant=args.ucb_constant,
         ucb_base=args.ucb_base,
         horizon=args.horizon,
@@ -49,7 +49,7 @@ def uct_exp(args, env, dp, log_loc, start):
             raise e
         else:
             print("Unexpected exception in generating solution")
-            log_error(traceback.format_exc() + '\n', log_loc)
+            log_error(traceback .format_exc() + '\n', log_loc)
             return None, None
 
     # these may not be assigned, set default values

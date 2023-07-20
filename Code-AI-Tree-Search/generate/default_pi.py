@@ -14,10 +14,10 @@ class DefaultPolicyHeuristic:
         self.horizon = horizon
         self.env = env
         self.sample_times = 0
-        self.time_stamps = [] # time stamp when a new sample is generated
+        self.time_stamps = []  # time stamp when a new sample is generated
 
     @abstractmethod
-    def get_predict_sequence(self, state, horizon=None):
+    def get_predict_sequence(self, state, horizon = None):
         pass
 
     @abstractmethod
@@ -39,13 +39,13 @@ class APPSHeuristic(DefaultPolicyHeuristic):
                  horizon,
                  device,
                  env,
-                 value_model=None,
-                 new_token_num=None,
-                 use_seq_cache=False, # disable all caching by default
-                 use_prompt_cache=False,
-                 top_k_cache_steps=0,
-                 ts_mode='best',
-                 debug=False):
+                 value_model = None,
+                 new_token_num = None,
+                 use_seq_cache = False,  # disable all caching by default
+                 use_prompt_cache = False,
+                 top_k_cache_steps = 0,
+                 ts_mode = 'best',
+                 debug = False):
         super(APPSHeuristic, self).__init__(k=k, horizon=horizon, env=env)
 
         self.tokenizer = tokenizer
@@ -59,7 +59,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
         self.env = env
 
         self.use_seq_cache = use_seq_cache
-        self.use_prompt_cache = use_prompt_cache # todo
+        self.use_prompt_cache = use_prompt_cache  # todo
         self.top_k_cache_steps = top_k_cache_steps
         self.ts_mode = ts_mode
 
@@ -100,6 +100,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             predicted sequence, but only with up to self.new_token_num new tokens.
             This uses self.get_predict_sequence.
         """
+        # 根据当前结点一路预测到底，但是有限制，新的代码token数量小于new_token_num
         # add length of prompt and existing program
         horizon = len(state) + self.new_token_num
         # don't exceed the length of Transformer input
@@ -107,7 +108,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
 
         return self.get_predict_sequence(state, horizon=horizon)
 
-    def get_predict_sequence(self, state, horizon=None):
+    def get_predict_sequence(self, state, horizon = None):
         """
         Args:
             horizon: return a new sequence with this extra length
@@ -115,10 +116,11 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             Get the most likely sequence starting from state.
         """
         with torch.no_grad():
-            encoded_ids = state # as a list
+            encoded_ids = state  # as a list
             input_ids = torch.LongTensor(encoded_ids).unsqueeze(0).to(self.device)
 
             if self.use_seq_cache:
+                # seq_cache会存储之前生成过的token序列，节省计算时间
                 output_ids = self.seq_cache.get(encoded_ids)
                 if output_ids is not None:
                     return output_ids
@@ -129,10 +131,11 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             start_time = time.time()
 
             sample_mode = (self.ts_mode == 'sample')
+
             model_output = self.model.generate(
                 input_ids,
                 top_k=self.k,
-                num_beams=(1 if sample_mode else self.num_beams), # if sampling enabled, beam should always be 1
+                num_beams=(1 if sample_mode else self.num_beams),  # if sampling enabled, beam should always be 1
                 num_return_sequences=self.num_beams,
                 do_sample=sample_mode,
                 early_stopping=True,
@@ -140,13 +143,15 @@ class APPSHeuristic(DefaultPolicyHeuristic):
                 output_hidden_states=True,
                 output_scores=True,
                 max_length=horizon,
-                use_cache=True # huggingface default cache is always enabled
+                use_cache=True  # huggingface default cache is always enabled
             )
 
             if self.top_k_cache_steps > 0:
                 if hasattr(model_output, 'beam_indices'):
                     # beam search output
-                    self.top_k_cache.add(input_ids, model_output.sequences, model_output.scores, beam_indices=model_output.beam_indices)
+
+                    self.top_k_cache.add(input_ids, model_output.sequences, model_output.scores,
+                                         beam_indices=model_output.beam_indices)
                 else:
                     self.top_k_cache.add(input_ids, model_output.sequences, model_output.scores)
 
@@ -157,6 +162,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             if len(output_ids_list) > 1 and self.test_all_beams:
                 # if got multiple output_ids using beam search, and going to test all beams (which takes more time)
                 # pick the one that has the highest reward
+                # 得到奖励值最高的输出
                 cand_rewards = [self.env.get_reward(output_ids) for output_ids in output_ids_list]
                 output_ids = output_ids_list[np.argmax(cand_rewards)]
             else:
@@ -192,9 +198,13 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             A list of k most likely tokens generate in state (descending in their scores)
             The probability of each action
         """
+        # 这里终于调用了语言模型，利用语言模型预测k个最可能的action(也就是token，代码生成中每步的动作就是产生token)
         with torch.no_grad():
+            #
             if self.top_k_cache_steps > 0:
+                # 缓存了前k个token
                 top_k_info = self.top_k_cache.get(state)
+                # 缓存没有会返回None，如果不为None说明缓存击中
                 if top_k_info is not None:
                     if self.debug: print('top-k cache hit')
                     return top_k_info
@@ -203,7 +213,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             input_ids = torch.LongTensor(encoded_ids).unsqueeze(0).to(self.device)
 
             start_time = time.time()
-
+            # 将state作为输入传入模型，生成k个最可能的字符, generate方法有待研究
             model_output = self.model.generate(
                 input_ids,
                 top_k=self.k,
@@ -214,9 +224,11 @@ class APPSHeuristic(DefaultPolicyHeuristic):
                 output_scores=True,
                 use_cache=True,
             )
+            # debug模式下会打印模型的运行时间
             if self.debug: print('generate top-k time: ' + str(time.time() - start_time))
-
+            # model_output的数据类型有待考证
             top_k_scores, top_k_tokens = torch.topk(model_output.scores[0][0], k=self.k, sorted=True)
+            # 对score归一化
             top_k_scores = torch.softmax(top_k_scores, dim=-1)
 
             return top_k_tokens.tolist(), top_k_scores.tolist()
@@ -228,4 +240,3 @@ class APPSHeuristic(DefaultPolicyHeuristic):
 
         if self.top_k_cache_steps > 0:
             self.top_k_cache.clear(new_state)
-
