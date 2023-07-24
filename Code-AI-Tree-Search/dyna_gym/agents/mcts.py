@@ -23,7 +23,8 @@ import matplotlib.pyplot as plt
 from eval.utils import hierarchy_pos
 
 
-def chance_node_value(node, mode="best"):
+# 用于计算Q(s, a), sampled_returns存储了所有
+def chance_node_value(node, mode = "best"):
     """
     Value of a chance node
     """
@@ -53,7 +54,7 @@ def mcts_tree_policy(ag, children):
     return random.choice(children)
 
 
-def mcts_procedure(ag, tree_policy, env, done, root=None, rollout_weight=1., term_cond=None, ts_mode="best"):
+def mcts_procedure(ag, tree_policy, env, done, root = None, rollout_weight = 1., term_cond = None, ts_mode = "best"):
     """
     Compute the entire MCTS procedure wrt to the selected tree policy.
     Funciton tree_policy is a function taking an agent + a list of ChanceNodes as argument
@@ -107,11 +108,14 @@ def mcts_procedure(ag, tree_policy, env, done, root=None, rollout_weight=1., ter
                 # 进入这个分支表明当前结点时chanceNode，cNode的特点是只有action和action的概率。state_表示采取在父节点的state下采取当前action到达当前的state_p
                 # cNode表示可能的下一个节点
                 # 这里的reward是通过率，state_p是新状态，由父节点state经过action产生。action在树里表示边，实际存储在cNode里
+                # state_p 就是 node.parent.state + node.action
                 state_p, reward, terminal = env.transition(node.parent.state, node.action, ag.is_model_dynamic)
                 rewards.append(reward)
 
                 new_state = True
                 # 如果当前节点没有子节点，就是一个完全没有探索过的节点，那么直接就到124行结束选择阶段
+                # 根据整体的代码逻辑来看,cNode最多只有一个dNode结点，因为state_p = parent.state + node.action
+                # 如果cNode不变,那么parent.state不会变，而且每个cNode结点只存储了一个action,因此action也不会变
                 for i in range(len(node.children)):
                     # Note that for deterministic transitions, node.children contains at most one child
                     # 这里判断子节点的状态和state_p是否一样，一样的话说明state_p的子节点已经产生了，进入到子节点中，并且将new_state设置为false表示仍然在选择阶段
@@ -201,7 +205,7 @@ class DecisionNode:
         dp: default policy, used to prioritize and filter possible actions
     """
 
-    def __init__(self, parent, state, possible_actions=[], is_terminal=False, dp=None, id=None):
+    def __init__(self, parent, state, possible_actions = [], is_terminal = False, dp = None, id = None):
         self.id = id
         self.parent = parent
         self.state = state
@@ -253,10 +257,11 @@ class ChanceNode:
     def __init__(self, parent, action_and_score):
         self.parent = parent
         self.action = action_and_score[0]
-        self.depth = parent.depth
-        self.children = []
         # 下一个节点的概率，由语言模型生成，这里传统的mcts可能会采取不同的采样算法来缩小搜索空间
         self.prob = action_and_score[1]  # the probability that this action should be token, provided by default policy
+        self.depth = parent.depth
+
+        self.children = []
         self.sampled_returns = []
 
     def expanded(self):
@@ -268,7 +273,7 @@ class MCTS(object):
     MCTS agent
     """
 
-    def __init__(self, action_space, rollouts=100, horizon=100, gamma=0.9, is_model_dynamic=True):
+    def __init__(self, action_space, rollouts = 100, horizon = 100, gamma = 0.9, is_model_dynamic = True):
         if type(action_space) == spaces.discrete.Discrete:
             self.action_space = list(combinations(action_space))
         else:
@@ -279,7 +284,7 @@ class MCTS(object):
         self.gamma = gamma
         self.is_model_dynamic = is_model_dynamic
 
-    def reset(self, p=None):
+    def reset(self, p = None):
         """
         Reset the attributes.
         Expect to receive them in the same order as init.
@@ -324,9 +329,9 @@ def update_root(ag, act, state_p):
 
 def pre_order_traverse(
         decision_node: DecisionNode,
-        decision_node_fn=lambda n, d: None,
-        chance_node_fn=lambda n, d: None,
-        depth=0):
+        decision_node_fn = lambda n, d: None,
+        chance_node_fn = lambda n, d: None,
+        depth = 0):
     """
     Postorder traversal of the tree rooted at state
     Apply fn once visited
