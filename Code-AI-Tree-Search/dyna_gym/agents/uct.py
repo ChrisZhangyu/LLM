@@ -13,20 +13,25 @@ import dyna_gym.utils.utils as utils
 from math import sqrt, log
 from gym import spaces
 
+
 def uct_tree_policy(ag, children):
     # 根据ag.ucb计算children的值然后选出最大的,ag.ucb规定了计算最大值的方法
     return max(children, key=ag.ucb)
 
+
 def p_uct_tree_policy(ag, children):
     return max(children, key=ag.p_ucb)
 
+
 def var_p_uct_tree_policy(ag, children):
     return max(children, key=ag.var_p_ucb)
+
 
 class UCT(object):
     """
     UCT agent
     """
+
     def __init__(self, action_space, rollouts=100, horizon=100, gamma=0.9, ucb_constant=6.36396103068, ucb_base=50.,
                  is_model_dynamic=True, width=None, dp=None, ts_mode='best', reuse_tree=False, alg='uct'):
         if type(action_space) == spaces.discrete.Discrete:
@@ -88,14 +93,14 @@ class UCT(object):
         """
         Upper Confidence Bound of a chance node
         """
-        return mcts.chance_node_value(node)\
+        return mcts.chance_node_value(node) \
             + self.ucb_constant * sqrt(log(node.parent.visits)) / (1 + len(node.sampled_returns))
 
     def p_ucb(self, node):
         """
         Upper Confidence Bound of a chance node, weighted by prior probability
         """
-        return mcts.chance_node_value(node)\
+        return mcts.chance_node_value(node) \
             + self.ucb_constant * node.prob * sqrt(log(node.parent.visits)) / (1 + len(node.sampled_returns))
 
     def var_p_ucb(self, node):
@@ -103,10 +108,11 @@ class UCT(object):
         Upper Confidence Bound of a chance node, the ucb exploration weight is a variable
         """
         ucb_parameter = log((node.parent.visits + self.ucb_base + 1) / self.ucb_base) + self.ucb_constant
-        return mcts.chance_node_value(node)\
+        return mcts.chance_node_value(node) \
             + ucb_parameter * node.prob * sqrt(log(node.parent.visits)) / (1 + len(node.sampled_returns))
 
     def act(self, env, done, rollout_weight=1, term_cond=None):
         root = self.root if self.reuse_tree else None
-        opt_act, self.root = mcts.mcts_procedure(self, self.tree_policy, env, done, root=root, rollout_weight=rollout_weight, term_cond=term_cond)
+        opt_act, self.root = mcts.mcts_procedure(self, self.tree_policy, env, done, root=root,
+                                                 rollout_weight=rollout_weight, term_cond=term_cond)
         return opt_act

@@ -34,6 +34,7 @@ def check_correctness(prob_path, output_str, mode, public_test_cases):
         # so we use 21=the average number of tests for a smaple in the test split instead
         # result为空，说明测试全部失败了，具体数量拿不到，取了个均值。为什么拿不到具体数量？数量不就是测试用例的总数量，
         avg_number_tests = 21
+        # 21搁-1
         result = [[-1] * avg_number_tests]
     return result[0]
 
@@ -48,12 +49,14 @@ def compute_reward(prob_path, output_str, mode='train', public_test_cases=None, 
         # 检查正确性，通过直接运行代码
         curr_res = check_correctness(prob_path, output_str, mode, public_test_cases)
         fixed = []
+        # 转换一下格式
         for e in curr_res:
             if isinstance(e, np.ndarray):
                 e = e.item(0)
             if isinstance(e, np.bool_):
                 e = bool(e)
             fixed.append(e)
+
         curr_res = fixed
         # if not np.all(curr_res):
         #     print(f"Results were not all True: {curr_res}")

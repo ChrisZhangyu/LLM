@@ -52,7 +52,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
         self.k = k
         self.num_beams = num_beams
         self.test_all_beams = test_all_beams
-        # ?
+        # 长度
         self.horizon = horizon
         self.new_token_num = new_token_num
         self.device = device
@@ -162,7 +162,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             if len(output_ids_list) > 1 and self.test_all_beams:
                 # if got multiple output_ids using beam search, and going to test all beams (which takes more time)
                 # pick the one that has the highest reward
-                # 得到奖励值最高的输出
+                # 如果根据束搜索得到了多个结果，那么输出奖励值最高的
                 cand_rewards = [self.env.get_reward(output_ids) for output_ids in output_ids_list]
                 output_ids = output_ids_list[np.argmax(cand_rewards)]
             else:
@@ -185,6 +185,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
         with torch.no_grad():
             encoded_ids = state
             input_ids = torch.LongTensor(encoded_ids).unsqueeze(0).to(self.device)
+            # 利用value model估计价值
             est_value = self.value_model(input_ids).logits.item()
 
             if self.debug:
@@ -226,7 +227,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             )
             # debug模式下会打印模型的运行时间
             if self.debug: print('generate top-k time: ' + str(time.time() - start_time))
-            # model_output的数据类型有待考证
+            # model_output的数据类型有待考证。根据代码推测，模型的输出包括token本身及token的score
             top_k_scores, top_k_tokens = torch.topk(model_output.scores[0][0], k=self.k, sorted=True)
             # 对score归一化
             top_k_scores = torch.softmax(top_k_scores, dim=-1)

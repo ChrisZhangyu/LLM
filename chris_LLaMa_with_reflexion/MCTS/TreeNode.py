@@ -1,0 +1,3 @@
+class DecisionNode:
+    pass
+

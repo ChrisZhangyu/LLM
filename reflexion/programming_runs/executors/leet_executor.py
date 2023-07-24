@@ -6,6 +6,7 @@ from .executor_types import ExecuteResult, Executor
 from .executor_utils import to_jsonl
 from datetime import datetime
 
+
 class LeetExecutor(Executor):
     def __init__(self, lang, executor: Executor, formatter):
         from .leetcode_env.leetcode_env.utils import SubmissionFormatter
@@ -18,7 +19,7 @@ class LeetExecutor(Executor):
         self.formatter = formatter
         self.env = LeetCodeEnv()
         self.name = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    
+
     def execute(self, func: str, tests: List[str], timeout: int = 5) -> ExecuteResult:
         return self.executor.execute(func, tests, timeout)
 

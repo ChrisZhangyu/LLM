@@ -143,6 +143,7 @@ class APPSProgramEnv(ProgramEnv):
         # 将状态转换成程序，状态现在是一堆数值，调用tokenizer的decode方法
         output_str = self.convert_state_to_program(s)
         # 计算奖励，prob_path是外部给的，
+        #  这里的reward就是通过率，通过执行代码的测试用例计算出来
         reward = compute_reward(self.prob_path, output_str, mode=mode, public_test_cases=self.public_test_cases)
 
         if mode == 'train':

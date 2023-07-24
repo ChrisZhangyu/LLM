@@ -86,7 +86,7 @@ class LeetCodeEnv(gym.Env):
 
         else:
             status_msg = 'Unknown'
-            
+        # 这里的奖励值也是文本形式，不是标量计算
         return status_msg == 'Accepted', status_msg
     
     def __wait_for_cooldown(self):

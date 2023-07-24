@@ -39,6 +39,7 @@ def chance_node_value(node, mode="best"):
     else:
         raise Exception(f"Unknown tree search mode {mode}")
 
+
 def combinations(space):
     if isinstance(space, spaces.Discrete):
         return range(space.n)
@@ -47,8 +48,10 @@ def combinations(space):
     else:
         raise NotImplementedError
 
+
 def mcts_tree_policy(ag, children):
     return random.choice(children)
+
 
 def mcts_procedure(ag, tree_policy, env, done, root=None, rollout_weight=1., term_cond=None, ts_mode="best"):
     """
@@ -78,8 +81,8 @@ def mcts_procedure(ag, tree_policy, env, done, root=None, rollout_weight=1., ter
         # uct_multiple_exp不会有term_cond变量，uct_exp才会有
         if term_cond is not None and term_cond():
             break
-        rewards = [] # Rewards collected along the tree for the current rollout
-        node = root # Current node
+        rewards = []  # Rewards collected along the tree for the current rollout
+        node = root  # Current node
         terminal = done
 
         # Selection
@@ -90,45 +93,54 @@ def mcts_procedure(ag, tree_policy, env, done, root=None, rollout_weight=1., ter
         #       遍历当前结点的子节点，如果子节点的状态和新状态相同，那么进入到子节点中，如果都不相同，则退出选择阶段，说明当前的状态确实是新状态
         while select:
             # decisionNode表示已有树节点，选择阶段直接选择策略函数返回值最大的那个
-            if (type(node) == DecisionNode): # DecisionNode
+            if type(node) == DecisionNode:  # DecisionNode
                 if node.is_terminal:
                     # 当前是终止符的话直接退出选择阶段，进入124行
-                    select = False # Selected a terminal DecisionNode
+                    select = False  # Selected a terminal DecisionNode
                 else:
                     # uct_tree_policy，p_uct_tree_policy，var_p_uct_tree_policy三种策略中的一个
-                    node = tree_policy(ag, node.children) # Shun: move down the tree, node is now a ChanceNode
+                    # MCTS的两种策略，tree_policy和default_policy,
+                    # tp用来选择已经完全扩展的节点，dp用来选择没有完全扩展的节点，即还有子节点没探索过
+                    node = tree_policy(ag, node.children)  # Shun: move down the tree, node is now a ChanceNode
 
-            else: # ChanceNode
-                # 进入这个分支表明当前结点时chanceNode, node.action是可能的下一个状态，需要计算reward，这是action已经生成了
+            else:  # ChanceNode
+                # 进入这个分支表明当前结点时chanceNode，cNode的特点是只有action和action的概率。state_表示采取在父节点的state下采取当前action到达当前的state_p
+                # cNode表示可能的下一个节点
+                # 这里的reward是通过率，state_p是新状态，由父节点state经过action产生。action在树里表示边，实际存储在cNode里
                 state_p, reward, terminal = env.transition(node.parent.state, node.action, ag.is_model_dynamic)
                 rewards.append(reward)
 
                 new_state = True
-                #
+                # 如果当前节点没有子节点，就是一个完全没有探索过的节点，那么直接就到124行结束选择阶段
                 for i in range(len(node.children)):
                     # Note that for deterministic transitions, node.children contains at most one child
-                    # 这里判断了子节点的状态和state_p是否一样，一样的话进入到子节点中，并且将new_state设置为false表示仍然在选择阶段
-                    # state_p表示被选中的状态
+                    # 这里判断子节点的状态和state_p是否一样，一样的话说明state_p的子节点已经产生了，进入到子节点中，并且将new_state设置为false表示仍然在选择阶段
+                    # 如果不一样就遍历下一个子节点，如果所有的子节点都没有出现state_p状态
+                    # 说明state_p的状态还没有创建节点，进入到扩展阶段，也就是说当前的节点还没有完全扩展完。
                     if env.equality_operator(node.children[i].state, state_p):
                         # Shun: state_p already in the tree, point node to the corresponding Decision Node
                         node = node.children[i]
                         new_state = False
                         break
-                # 如果不是新状态还要继续停留在选择阶段
+                # 如果不是新状态还要继续停留在选择阶段，到达这一步有两种情况，
+                # 1.没有子节点，说明完全没有扩展
+                # 2.采取action产生的状态子节点中没有，说明没有扩展完
                 if new_state:
-                    select = False # Selected a ChanceNode
+                    select = False  # Selected a ChanceNode
 
         # Expansion
         # If node is a decision node, then it must be a terminal node, do nothing here
         # 根据前面的逻辑，走到这一步时的node指向的肯定是cNode结点，如果是dNode，说明已经走到了终止符号，即前面的代码走到了第96行，然后跳转到当前行
         if type(node) == ChanceNode:
-            node.children.append(DecisionNode(node, state_p, ag.action_space.copy(), terminal, dp=ag.dp, id=decision_node_num))
+            # 为当前节点创建子节点，state_p为新状态，子节点类型都是cNode
+            node.children.append(
+                DecisionNode(node, state_p, ag.action_space.copy(), terminal, dp=ag.dp, id=decision_node_num))
             decision_node_num += 1
             node = node.children[-1]
 
         # Evaluation
         # now `rewards` collected all rewards in the ChanceNodes above this node
-        assert(type(node) == DecisionNode)
+        assert (type(node) == DecisionNode)
         state = node.state
         if ag.dp is None:
             t = 0
@@ -138,19 +150,22 @@ def mcts_procedure(ag, tree_policy, env, done, root=None, rollout_weight=1., ter
                 action = env.action_space.sample()
                 # 产生下一个状态
                 state, reward, terminal = env.transition(state, action, ag.is_model_dynamic)
-                estimate += reward * (ag.gamma**t)
+                # 如果没有价值模型，那么用传统的方法估计价值，gamma是衰减因子，越往后衰减越严重
+                estimate += reward * (ag.gamma ** t)
                 t += 1
         else:
             if not node.is_terminal:
-
+                # 这里可以选择根据计算价值还是计算奖励，奖励是短期的，价值是长期的
                 if ag.dp.use_value:
+                    # 对代码生成限制长度，这样可以不用将完整的程序生成
                     state = ag.dp.get_short_horizon_sequence(state)
                     # this state may not be a complete program, call the pre-trained value model to get an estimate
+                    # 利用value model估计价值，传统的价值计算是通过从当前节点一直模拟到终点，然后计算结果，算出这一条路径的价值，本文是直接用transformer估计
                     estimate = ag.dp.get_value(state)
                 else:
                     # follow the default policy to get a terminal state
                     state = ag.dp.get_predict_sequence(state)
-
+                    # reward就是通过率
                     estimate = env.get_reward(state)
 
                     # save this information for demo
@@ -160,11 +175,13 @@ def mcts_procedure(ag, tree_policy, env, done, root=None, rollout_weight=1., ter
                 estimate = 0
 
         # Backpropagation
+        # 反向传播，根据当前扩展出的节点的价值和访问次数，更新父节点的访问次数和价值
         node.visits += 1
         node = node.parent
-        assert(type(node) == ChanceNode)
+        assert (type(node) == ChanceNode)
         while node:
             if len(rewards) != 0:
+                # 价值估计
                 estimate = rewards.pop() + ag.gamma * estimate
             node.sampled_returns.append(estimate)
             node.parent.visits += 1
@@ -175,6 +192,7 @@ def mcts_procedure(ag, tree_policy, env, done, root=None, rollout_weight=1., ter
 
     return max(root.children, key=lambda n: chance_node_value(n, mode=ts_mode)).action, root
 
+
 class DecisionNode:
     """
     Decision node class, labelled by a state
@@ -182,14 +200,15 @@ class DecisionNode:
     Args:
         dp: default policy, used to prioritize and filter possible actions
     """
+
     def __init__(self, parent, state, possible_actions=[], is_terminal=False, dp=None, id=None):
         self.id = id
         self.parent = parent
         self.state = state
         self.is_terminal = is_terminal
-        if self.parent is None: # Root node
+        if self.parent is None:  # Root node
             self.depth = 0
-        else: # Non root node
+        else:  # Non root node
             self.depth = parent.depth + 1
         # 如果默认策略是空，那么就根据传进来的actions进行随机选择，否则按照生成策略去生成可能的actions。
         # possible_actions来源于各个agent的action_space变量，在创建agent时由创建者指定
@@ -199,7 +218,7 @@ class DecisionNode:
 
             # if no default policy is provided, assume selection probability is uniform
             self.action_scores = [1.0 / len(self.possible_actions)] * len(self.possible_actions)
-        # 根据默认策略进行action的生成
+        # 根据默认策略进行action的生成，这里就是论文中说的transformer的beam_search算法
         else:
             # get possible actions from dp
             # default policy suggests what children to consider
@@ -211,7 +230,8 @@ class DecisionNode:
 
         # populate its children
         # 根据备选的k个action构建子节点
-        self.children = [ChanceNode(self, (act, score)) for act, score in zip(self.possible_actions, self.action_scores)]
+        self.children = [ChanceNode(self, (act, score)) for act, score in
+                         zip(self.possible_actions, self.action_scores)]
 
         self.explored_children = 0
         # this decision node should be visited at least once, otherwise p-uct makes no sense for this node
@@ -229,12 +249,14 @@ class ChanceNode:
     Chance node class, labelled by a state-action pair
     The state is accessed via the parent attribute
     """
+
     def __init__(self, parent, action_and_score):
         self.parent = parent
         self.action = action_and_score[0]
         self.depth = parent.depth
         self.children = []
-        self.prob = action_and_score[1] # the probability that this action should be token, provided by default policy
+        # 下一个节点的概率，由语言模型生成，这里传统的mcts可能会采取不同的采样算法来缩小搜索空间
+        self.prob = action_and_score[1]  # the probability that this action should be token, provided by default policy
         self.sampled_returns = []
 
     def expanded(self):
@@ -245,6 +267,7 @@ class MCTS(object):
     """
     MCTS agent
     """
+
     def __init__(self, action_space, rollouts=100, horizon=100, gamma=0.9, is_model_dynamic=True):
         if type(action_space) == spaces.discrete.Discrete:
             self.action_space = list(combinations(action_space))
@@ -267,7 +290,6 @@ class MCTS(object):
         else:
             utils.assert_types(p, [spaces.discrete.Discrete, int, int, float, bool])
             self.__init__(p[0], p[1], p[2], p[3], p[4])
-
 
     def display(self):
         """
@@ -316,6 +338,7 @@ def pre_order_traverse(
         for next_decision_node in chance_node.children:
             pre_order_traverse(next_decision_node, decision_node_fn, chance_node_fn, depth + 1)
 
+
 def get_all_decision_nodes(root: DecisionNode):
     """
     Get all decision nodes in the tree
@@ -323,6 +346,7 @@ def get_all_decision_nodes(root: DecisionNode):
     decision_nodes = []
     pre_order_traverse(root, decision_node_fn=lambda n, d: decision_nodes.append(n))
     return decision_nodes
+
 
 def plot_tree(root: DecisionNode, env, filename):
     """
@@ -333,7 +357,8 @@ def plot_tree(root: DecisionNode, env, filename):
     def printer(node: ChanceNode, depth):
         # print the average return of the *parent* of this state
         # (this is easier to implement than printing all its children nodes)
-        print("\t" * depth, repr(tokenizer.decode(node.action)), 'p', node.prob, 'q', chance_node_value(node), 'len(returns)', len(node.sampled_returns))
+        print("\t" * depth, repr(tokenizer.decode(node.action)), 'p', node.prob, 'q', chance_node_value(node),
+              'len(returns)', len(node.sampled_returns))
 
     pre_order_traverse(root, chance_node_fn=printer)
 
@@ -362,6 +387,7 @@ def plot_tree(root: DecisionNode, env, filename):
 
     plt.savefig(filename + '.pdf', format="pdf")
     plt.close()
+
 
 def convert_to_json(root: DecisionNode, env, selected_act):
     """

@@ -2,10 +2,10 @@ import ast
 import signal
 import astunparse
 
-from .executor_utils import function_with_timeout
+from executor_utils import function_with_timeout
 
 from typing import List
-from .executor_types import ExecuteResult, Executor
+from executor_types import ExecuteResult, Executor
 
 class PyExecutor(Executor):
     def execute(self, func: str, tests: List[str], timeout: int = 5) -> ExecuteResult:
@@ -20,7 +20,7 @@ class PyExecutor(Executor):
         num_tests = len(func_test_list)
         for i in range(num_tests):
             try:
-
+                # 执行生成的代码，捕获错误, 底层开启线程执行的时候运行的是exec,内容是func_test_list的里的文本
                 function_with_timeout(exec, (func_test_list[i], globals()), timeout)
 
                 success_tests += [tests[i]]

@@ -15,6 +15,7 @@ def value(node):
     """
     return sum(node.sampled_returns) / len(node.sampled_returns)
 
+
 def combinations(space):
     if isinstance(space, gym.spaces.Discrete):
         return range(space.n)
@@ -23,22 +24,25 @@ def combinations(space):
     else:
         raise NotImplementedError
 
+
 class Node:
     def __init__(self, parent, action):
         self.parent = parent
         self.action = action
-        if self.parent is None: # Root node
+        if self.parent is None:  # Root node
             self.depth = 0
-        else: # Non root node
+        else:  # Non root node
             self.depth = parent.depth + 1
         self.children = []
         self.explored_children = 0
         self.sampled_returns = []
 
+
 class OLUCT(object):
     """
     OLUCT agent
     """
+
     def __init__(self, gamma=0.9, rollouts=100, max_depth=300, ucb_constant=6.36396103068, is_model_dynamic=True):
         self.gamma = gamma
         self.rollouts = rollouts
@@ -73,7 +77,7 @@ class OLUCT(object):
         """
         Upper Confidence Bound
         """
-        return value(node) + self.ucb_constant * sqrt(log(len(node.parent.sampled_returns))/len(node.sampled_returns))
+        return value(node) + self.ucb_constant * sqrt(log(len(node.parent.sampled_returns)) / len(node.sampled_returns))
 
     def act(self, env, done):
         """
@@ -81,20 +85,20 @@ class OLUCT(object):
         """
         root = Node(None, None)
         for _ in range(self.rollouts):
-            rewards = [] # Rewards collected along the tree for the current rollout
-            node = root # Current node
+            rewards = []  # Rewards collected along the tree for the current rollout
+            node = root  # Current node
             terminal = done
             state = env.state
 
             # Selection
-            while len(node.children) != 0: # While node has children
-                if node.explored_children < len(node.children): # Explore a new child
+            while len(node.children) != 0:  # While node has children
+                if node.explored_children < len(node.children):  # Explore a new child
                     child = node.children[node.explored_children]
                     node.explored_children += 1
                     node = child
-                else: # Go to UCB child
+                else:  # Go to UCB child
                     node = max(node.children, key=self.ucb)
-                state, reward, terminal = env.transition(state,node.action,self.is_model_dynamic)
+                state, reward, terminal = env.transition(state, node.action, self.is_model_dynamic)
                 rewards.append(reward)
 
             # Expansion
@@ -106,9 +110,9 @@ class OLUCT(object):
             t = 0
             estimate = 0
             while not terminal:
-                action = env.action_space.sample() # default policy
-                state, reward, terminal = env.transition(state,action,self.is_model_dynamic)
-                estimate += reward * (self.gamma**t)
+                action = env.action_space.sample()  # default policy
+                state, reward, terminal = env.transition(state, action, self.is_model_dynamic)
+                estimate += reward * (self.gamma ** t)
                 t += 1
                 if node.depth + t > self.max_depth:
                     break

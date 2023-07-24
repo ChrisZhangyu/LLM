@@ -1,4 +1,4 @@
-from executors.leetcode_env.leetcode_env.utils import PySubmissionFormatter
+from leetcode_env.leetcode_env.utils import PySubmissionFormatter
 
 
 def timeout_handler(_, __):
@@ -15,6 +15,7 @@ class PropagatingThread(Thread):
     def run(self):
         self.exc = None
         try:
+            self.ret = None
             if hasattr(self, '_Thread__target'):
                 # Thread uses name mangling prior to Python 3.
                 self.ret = self._Thread__target(*self._Thread__args, **self._Thread__kwargs)
@@ -34,10 +35,12 @@ def function_with_timeout(func, args, timeout):
     result_container = []
 
     def wrapper():
+        # 真正执行的代码func(*args)
         result_container.append(func(*args))
-
+    # target是执行的目标
     thread = PropagatingThread(target=wrapper)
     thread.start()
+    # 等待timeout秒，就向下执行，注意这时子线程不会停止，所以下面要判断
     thread.join(timeout)
 
     if thread.is_alive():

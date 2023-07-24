@@ -25,7 +25,7 @@ def reindent_code(codestr):
     run_reindent(
         codestr,
         ret,
-        config = {
+        config={
             "dry-run": False,
             "help": False,
             "to": 10,
@@ -40,6 +40,7 @@ def reindent_code(codestr):
 
     return ret.getvalue()
 
+
 def generate_apps_prompt(args, test_case_path, prompt_path, solutions_path, tokenizer, starter_path=None):
     _input = "\nQUESTION:\n"
     with open(prompt_path, "r") as f:
@@ -50,18 +51,18 @@ def generate_apps_prompt(args, test_case_path, prompt_path, solutions_path, toke
         with open(starter_path, "r") as f:
             data = f.readlines()
             data = "".join(data)
-            data = "\n" + data #+ "\n"
+            data = "\n" + data  # + "\n"
         _input += data
     else:
-        #_input += "\n\n"
+        # _input += "\n\n"
         pass
 
     with open(test_case_path, "r") as f:
         data = json.load(f)
     if not data.get("fn_name"):
-        _input += "\nUse Standard Input format"#\n"
+        _input += "\nUse Standard Input format"  # \n"
     else:
-        _input += "\nUse Call-Based format"#\n"
+        _input += "\nUse Call-Based format"  # \n"
 
     _input += "\nANSWER:\n"
 
@@ -93,6 +94,7 @@ def generate_apps_prompt(args, test_case_path, prompt_path, solutions_path, toke
         sample_sol = None
 
     return _input, sample_sol
+
 
 def get_output_str_from_state_for_apps(s):
     """

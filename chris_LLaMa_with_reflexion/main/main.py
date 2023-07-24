@@ -1,29 +1,16 @@
-import torch
-from transformers import LlamaTokenizer, LlamaForCausalLM
-
-from generator.generator import Generator
-from generator.generator_factory import get_generator
-from prompt.prompt_factory import prompt_factory
+from MCTS.mcts import mcts_procedure
+from util.util_factory import *
 
 model_path = '../model'
 tokenizer_path = '../model/tokenizer.model'
 
 
-def train():
-    tokenizer = LlamaTokenizer.from_pretrained(tokenizer_path)
-    model = LlamaForCausalLM.from_pretrained(model_path)
-    model.to('cuda')
-    prompt = 'Q: What is the largest animal?\nA:'
-    input_ids = tokenizer(prompt, return_tensors="pt").input_ids
-    generation_output = model.generate(
-        input_ids=input_ids, max_new_tokens=32
-    )
-    print(tokenizer.decode(generation_output[0]))
-
-
-def reflexion_main():
-
+def reflexion_mcts_main(args):
     gen = get_generator("LLaMa")
+    exe = get_executor()
+    env = get_environment()
+
+    mcts_procedure(env, exe, gen)
 
 
 if __name__ == '__main__':
