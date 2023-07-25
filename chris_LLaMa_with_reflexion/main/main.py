@@ -10,7 +10,7 @@ def reflexion_mcts_main(args):
     exe = get_executor()
     env = get_environment()
 
-    mcts_procedure(env, exe, gen)
+    # mcts_procedure(env, exe, gen)
 
 
 if __name__ == '__main__':

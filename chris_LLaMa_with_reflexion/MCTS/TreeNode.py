@@ -1,12 +1,27 @@
+from typing import Optional
+
+
+class Edge:
+    def __init__(self,
+                 action,
+                 action_probability,
+                 children = None,
+                 parent = None,
+                 ):
+        self.parent = parent
+        self.children = children
+        self.action = action
+        self.action_probability = action_probability
+        self.simulation_rewards = []
+
+
 class Node:
     def __init__(self,
-                 parent,
+                 parent: Optional[Edge, None],
                  state,
-                 possible_actions=[],
-                 is_terminal=False,
-                 id=None,
-                 children=None,
-                 action_probability=None,
+                 is_terminal = False,
+                 id = None,
+                 children: Optional[Edge, None] = None,
                  ):
         self.id = id
         self.parent = parent
@@ -18,9 +33,6 @@ class Node:
             self.depth = parent.depth + 1
 
         self.children = children
-        self.possible_action = possible_actions
-        self.action_probability = action_probability
-        self.simulation_rewards = []
 
         self.explored_children = 0
         # this decision node should be visited at least once, otherwise p-uct makes no sense for this node

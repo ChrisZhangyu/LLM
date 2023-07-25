@@ -71,7 +71,7 @@ def mcts_procedure(ag, tree_policy, env, done, root = None, rollout_weight = 1.,
         decision_node_num += 1
 
     # make sure the rollout number is at least one, and is at most ag.rollouts
-    # rollout_weight是什么意思不知道
+    # rollout_weight控制每次mcts循环的次数
     if rollout_weight > 1:
         warnings.warn("How come rollout_weight > 1? Setting to 1.")
     # 对rollouts截断，weight表示缩放因子,值小于1

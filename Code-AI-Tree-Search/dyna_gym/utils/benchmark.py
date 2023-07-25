@@ -31,7 +31,7 @@ def run(agent, env, tmax, verbose=False):
     if verbose:
         env.render()
     for t in range(tmax):
-        action = agent.act(env,done)
+        action = agent.act(env, done)
         _, r, done, _ = env.step(action)
         undiscounted_return += r
         discounted_return += (agent.gamma**t) * r
