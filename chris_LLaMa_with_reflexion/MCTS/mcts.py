@@ -18,9 +18,11 @@ def mcts_procedure(env, exe, gen, agent, rollout_weight, root, terminate_conditi
     rollouts = np.clip(int(agent.rollouts * rollout_weight), 1, agent.rollouts)
     cur_node = root
     for i in tqdm(range(rollouts)):
-        cur_node,  action = selection(cur_node, env, agent)
-        cur_node = expansion(cur_node, agent, env, action)
-        evaluation()
+        # 选择阶段，知道找到一个叶子结点
+        leaf_node,  action = selection(cur_node, env, agent)
+        # 扩展阶段，根据transformer选择
+        temp_node = expansion(leaf_node, agent, env, action)
+        evaluation(temp_node)
         backpropagation()
 
 
@@ -28,9 +30,17 @@ def backpropagation():
     pass
 
 
-def evaluation():
-    pass
-
+def evaluation(node, agent, env):
+    if not node.is_terminal:
+        if agent.default_policy.use_value:
+            # 模拟至结束
+            temp_full_state = agent.default_policy.get_short_sequence(node.state)
+            value = agent.default_policy.get_value(temp_full_state)
+        else:
+            temp_full_state = agent.default_policy.get_predict_sequence(node.state)
+            value = agent.default_policy.get_reward(temp_full_state)
+            node.info['complete_program'] = temp_full_state
+    return value
 
 def expansion(node: Node, agent, env, action):
     new_state, reward, terminal = env.transition(node.state, action)
@@ -43,9 +53,11 @@ def expansion(node: Node, agent, env, action):
 
 def selection(node, env, agent):
     rewards = []
+    action = None
     while node.children is None:
         if node.is_terminal:
             break
         else:
+            # 采取action,到达下一个node
             node, action = agent.tree_policy(node)
-    return node
+    return node, action

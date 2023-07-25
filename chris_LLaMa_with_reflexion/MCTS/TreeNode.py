@@ -2,11 +2,11 @@ class Node:
     def __init__(self,
                  parent,
                  state,
-                 possible_actions = [],
-                 is_terminal = False,
-                 id = None,
-                 children = None,
-                 action_probability = None,
+                 possible_actions=[],
+                 is_terminal=False,
+                 id=None,
+                 children=None,
+                 action_probability=None,
                  ):
         self.id = id
         self.parent = parent
