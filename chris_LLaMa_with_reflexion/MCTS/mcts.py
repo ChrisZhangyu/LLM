@@ -76,7 +76,7 @@ def evaluation(node, agent, env):
 
 def expansion(node: Node, agent, env, edge: Edge, rewards_for_backpropagation: list):
     new_state, reward, terminal = env.transition(node.state, edge.action)
-    # 经过这条边的历史价值都要记录，方便计算Q(s, a)
+    # 经过这条边的历史奖励都要记录，方便计算Q(s, a)
     edge.simulation_rewards.append(reward)
     rewards_for_backpropagation.append(reward)
 

@@ -5,8 +5,8 @@ class Edge:
     def __init__(self,
                  action,
                  action_probability,
-                 children = None,
-                 parent = None,
+                 children=None,
+                 parent=None,
                  ):
         self.parent = parent
         self.children = children
@@ -19,8 +19,8 @@ class Node:
     def __init__(self,
                  parent: Optional[Edge, None],
                  state,
-                 is_terminal = False,
-                 id = None,
+                 is_terminal=False,
+                 id=None,
                  children: Optional[Edge, None] = None,
                  ):
         self.id = id

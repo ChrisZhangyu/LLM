@@ -161,6 +161,7 @@ def main():
         output_strs = [env.convert_state_to_program(s) for s in states]
 
         train_rewards = [env.get_reward(s, mode='train') for s in states]
+
         test_rewards = [env.get_reward(s, mode='test') for s in states]
 
         best_idx = np.argmax(train_rewards)
