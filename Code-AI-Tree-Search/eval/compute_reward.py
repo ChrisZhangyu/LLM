@@ -20,7 +20,7 @@ def check_correctness(prob_path, output_str, mode, public_test_cases):
     inside `run_test`"""
     # python自带的多进程管理器，可以保证多进程安全
     manager = multiprocessing.Manager()
-    # manager创建了一个共享的数据结构，线程安全
+    # manager创建了一个共享的数据结构，用于进程通信，这是并发安全的
     result = manager.list()
     # 创建子进程, target是要执行的函数，args是待执行函数所需要的参数
     p = multiprocessing.Process(target=_temp_run, args=(prob_path, output_str, mode, public_test_cases, result))
@@ -39,7 +39,7 @@ def check_correctness(prob_path, output_str, mode, public_test_cases):
     return result[0]
 
 
-def compute_reward(prob_path, output_str, mode='train', public_test_cases=None, return_info=False):
+def compute_reward(prob_path, output_str, mode = 'train', public_test_cases = None, return_info = False):
     """
     A utility function that computes the reward given problem path and output string of our model
     It is rewarded by the number of tests passed. When passing the same number of tests.
@@ -82,3 +82,10 @@ def get_program_quality(s):
     For now, only consider the length of the program. The shorter, the better.
     """
     return np.exp(- len(s) / 20)
+
+
+if __name__ == '__main__':
+    # 测试
+    func = "def add(a, b):\n    while True:\n        x = 1\n    return a + b"
+    print(func)
+

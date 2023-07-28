@@ -27,7 +27,7 @@ def bs_exp(args, env, dp):
     Run beam search
     """
     s = env.state
-    s = dp.get_predict_sequence(s, horizon=args.horizon)
+    s = dp.get_predict_sequence(None)
     return [s], {'sample_times': args.num_beams}
 
 def sample_exp(args, env, dp):
@@ -37,7 +37,7 @@ def sample_exp(args, env, dp):
     s = env.state
 
     assert dp.ts_mode == 'sample' # this should be specified after sampling alg is specified
-    samples = [dp.get_predict_sequence(s, horizon=args.horizon) for _ in tqdm(range(args.num_samples))]
+    samples = [dp.get_predict_sequence(None) for _ in tqdm(range(args.num_samples))]
     return samples, {'sample_times': args.num_samples}
 
 

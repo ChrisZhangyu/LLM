@@ -68,7 +68,7 @@ def evaluation(node, agent, env):
             value = agent.default_policy.get_value(temp_full_state)
         # 使用Transformer生成完整代码后，用完整程序的即时奖励当做价值
         else:
-            temp_full_state = agent.default_policy.get_predict_sequence(node.state)
+            temp_full_state = agent.default_policy.get_predict_sequence(None)
             value = env.get_reward(temp_full_state)
             node.info['complete_program'] = temp_full_state
     return value

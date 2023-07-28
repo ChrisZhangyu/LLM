@@ -4,13 +4,19 @@ from leetcode_env.leetcode_env.utils import PySubmissionFormatter
 def timeout_handler(_, __):
     raise TimeoutError()
 
+
 import os, json
+
+
 def to_jsonl(dict_data, file_path):
     with open(file_path, 'a') as file:
         json_line = json.dumps(dict_data)
         file.write(json_line + os.linesep)
 
+
 from threading import Thread
+
+
 class PropagatingThread(Thread):
     def run(self):
         self.exc = None
@@ -24,12 +30,12 @@ class PropagatingThread(Thread):
         except BaseException as e:
             self.exc = e
 
-    def join(self, timeout=None):
+    def join(self, timeout = None):
         super(PropagatingThread, self).join(timeout)
         if self.exc:
             raise self.exc
         return self.ret
-    
+
 
 def function_with_timeout(func, args, timeout):
     result_container = []
@@ -37,6 +43,7 @@ def function_with_timeout(func, args, timeout):
     def wrapper():
         # 真正执行的代码func(*args)
         result_container.append(func(*args))
+
     # target是执行的目标
     thread = PropagatingThread(target=wrapper)
     thread.start()
@@ -47,7 +54,8 @@ def function_with_timeout(func, args, timeout):
         raise TimeoutError()
     else:
         return result_container[0]
-    
+
+
 # Py tests
 
 if __name__ == "__main__":
@@ -56,10 +64,7 @@ if __name__ == "__main__":
     humaneval_1 = 'def solveSudoku(self, board: List[List[str]]) -> None:\n        """\n        Do not return anything, modify board in-place instead.\n        """\n'
     print(formatter.to_leetcode(humaneval_1))
     print("****************")
+    print(humaneval_1)
     print(leetcode_1)
     assert leetcode_1 == formatter.to_leetcode(humaneval_1)
     assert humaneval_1 == formatter.to_humaneval(leetcode_1)
-
-
-
-

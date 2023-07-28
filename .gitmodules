@@ -1,0 +1,3 @@
+[submodule "LLM/ReAct"]
+    path = LLM/ReAct
+    url = https://github.com/ysymyth/ReAct.git

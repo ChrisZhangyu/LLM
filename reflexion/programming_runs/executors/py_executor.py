@@ -7,6 +7,7 @@ from executor_utils import function_with_timeout
 from typing import List
 from executor_types import ExecuteResult, Executor
 
+
 class PyExecutor(Executor):
     def execute(self, func: str, tests: List[str], timeout: int = 5) -> ExecuteResult:
         # Combine function code and assert statement
@@ -44,7 +45,7 @@ class PyExecutor(Executor):
         feedback += "\n\nTests failed:"
         for test in failed_tests:
             feedback += f"\n{test}"
-            
+
         return ExecuteResult(is_passing, feedback, state)
 
     def evaluate(self, name: str, func: str, test: str, timeout: int = 5) -> bool:
@@ -67,14 +68,16 @@ check({name})
         except Exception:
             return False
 
+
 def get_call_str(assert_statement: str) -> str:
     ast_parsed = ast.parse(assert_statement)
     try:
-        call_str = ast_parsed.body[0].test.left # type: ignore
+        call_str = ast_parsed.body[0].test.left  # type: ignore
     except:
-        call_str = ast_parsed.body[0].test # type: ignore
+        call_str = ast_parsed.body[0].test  # type: ignore
 
     return astunparse.unparse(call_str).strip()
+
 
 def get_output(func: str, assert_statement: str, timeout: int = 5) -> str:
     try:
@@ -86,6 +89,7 @@ def get_output(func: str, assert_statement: str, timeout: int = 5) -> str:
         return "TIMEOUT"
     except Exception as e:
         return str(e)
+
 
 if __name__ == "__main__":
     pass

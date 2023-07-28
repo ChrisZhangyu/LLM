@@ -5,6 +5,7 @@ from generator.generator import Generator
 from prompt.prompt_factory import prompt_factory
 import transformers
 
+
 def get_generator(model_type: str):
     return Generator(prompt_factory("Python"), )
 
@@ -15,4 +16,3 @@ def get_executor():
 
 def get_environment():
     pass
-
