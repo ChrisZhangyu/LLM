@@ -18,6 +18,7 @@ class ProgramEnv(ABC):
     Action: a token (an integer).
     Reward: pass rate of the program (on the training set in training, and on the test set in testing).
     """
+
     def __init__(self, terminal_token, horizon):
         """
         Args:
@@ -34,6 +35,7 @@ class ProgramEnv(ABC):
     """
         s是父节点的state, a是当前节点的action。代码生成里，action就是要生成的字符。state保存了已经生成的所有字符
     """
+
     def transition(self, s, a, is_model_dynamic=True):
         next_state = s + [a]
 
@@ -85,12 +87,12 @@ class APPSProgramEnv(ProgramEnv):
     """
     Code generation environment for APPS dataset.
     """
+
     def __init__(self, prob_path, tokenizer, model_name, horizon, public_test_cases=None):
         self.prob_path = prob_path
         self.tokenizer = tokenizer
         self.model = model_name
         self.public_test_cases = public_test_cases
-
         # code from generate_gpt_codes that generate paths for all essential files
         public_test_case_path = os.path.join(prob_path, "public_input_output.json")
         test_case_path = os.path.join(prob_path, "input_output.json")

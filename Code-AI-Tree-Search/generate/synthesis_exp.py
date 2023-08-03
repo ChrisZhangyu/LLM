@@ -100,7 +100,7 @@ def main():
         if args.dataset == 'apps':
             from program_env import APPSProgramEnv
             env = APPSProgramEnv(
-                prob_path=prob_instance,
+                prob_path=("../" + prob_instance),
                 tokenizer=tokenizer,
                 model_name=args.load,
                 horizon=args.horizon,
@@ -182,16 +182,16 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--arch", default="gpt2", choices=transformers.GPT2_PRETRAINED_MODEL_ARCHIVE_LIST)
-    parser.add_argument("-l", "--load", default="../models/1.5B", type=str)
+    parser.add_argument("--arch", default="chatGLM", choices=transformers.GPT2_PRETRAINED_MODEL_ARCHIVE_LIST)
+    parser.add_argument("-l", "--load", default="../../model/codegeex2-6b", type=str)
     parser.add_argument("--load-value", default=None, type=str, help="An optional value function for evaluating partial programs.")
     parser.add_argument("-t","--test-loc", default="../data_split/test.json", type=str, help="This file specifies the locations of the test set of the code dataset.")
     parser.add_argument("--width", default=3, type=int, help="The maximum number of children for any node.")
     parser.add_argument("--horizon", default=1024, type=int, help="The maximum number of tokens to generate.")
     parser.add_argument("--new-token-num", default=None, type=int, help="The number of new tokens to generate before calling the value function."
                                                                         "None means using the complete horizon (args.horizon).")
-    parser.add_argument("--rollout", default=1, type=int, help="The maximum number of rollouts for PG-TD.")
-    parser.add_argument("--num-beams", default=1, type=int, help="The number of beams for beam search or PG-TD.")
+    parser.add_argument("--rollout", default=16, type=int, help="The maximum number of rollouts for PG-TD.")
+    parser.add_argument("--num-beams", default=3, type=int, help="The number of beams for beam search or PG-TD.")
     parser.add_argument("--num-samples", default=1, type=int, help="The number of samples for Sampling + Filtering.")
     parser.add_argument("--test-all-beams", action='store_true', default=False, help="If True, will run all the beams on test cases to find the best program, which is more time-consuming;"
                                                                                      "otherwise, simply return the most-likely sequence after beam search.")
@@ -228,11 +228,11 @@ if __name__ == '__main__':
     parser.add_argument("--dataset", default="apps", type=str, choices=["apps"])
     parser.add_argument("-i", "--index", default=None, type=int)
     parser.add_argument("-s","--start", default=0, type=int)
-    parser.add_argument("-e","--end", default=None, type=int)
+    parser.add_argument("-e","--end", default=200, type=int)
     parser.add_argument("--indices", default=None, type=str)
 
     parser.add_argument("--save", type=str, default="./results", help="Directory to save generated code.")
-    parser.add_argument("--prefix", type=str, default="", help="Prefix of generated code file.")
+    parser.add_argument("--prefix", type=str, default="t-", help="Prefix of generated code file.")
     parser.add_argument("-d", "--debug", action="store_true")
     parser.add_argument('--no-cuda', action='store_true', default=False)
 
@@ -259,7 +259,3 @@ if __name__ == '__main__':
     print(pprint.pformat(vars(args)))
 
     main()
-<<<<<<< HEAD
-=======
-
->>>>>>> c1f73534129cff7b4e9818322660174cde5d1517

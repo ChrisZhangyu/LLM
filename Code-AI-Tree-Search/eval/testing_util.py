@@ -48,7 +48,8 @@ def timeout_handler(signum, frame):
     raise TimeoutException
 
 
-# signal.signal(signal.SIGALRM, timeout_handler)
+# linux下这个才不会出错
+signal.signal(signal.SIGALRM, timeout_handler)
 timeout = 4  # seconds
 
 

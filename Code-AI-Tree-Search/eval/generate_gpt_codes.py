@@ -43,7 +43,7 @@ def reindent_code(codestr):
 
 def generate_apps_prompt(args, test_case_path, prompt_path, solutions_path, tokenizer, starter_path=None):
     _input = "\nQUESTION:\n"
-    with open(prompt_path, "r") as f:
+    with open(prompt_path, "r", encoding="utf-8") as f:
         data = f.readlines()
         data = "".join(data)
     _input += data
