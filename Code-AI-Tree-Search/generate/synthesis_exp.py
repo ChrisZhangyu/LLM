@@ -187,7 +187,7 @@ if __name__ == '__main__':
     parser.add_argument("--load-value", default=None, type=str, help="An optional value function for evaluating partial programs.")
     parser.add_argument("-t","--test-loc", default="../data_split/test.json", type=str, help="This file specifies the locations of the test set of the code dataset.")
     parser.add_argument("--width", default=3, type=int, help="The maximum number of children for any node.")
-    parser.add_argument("--horizon", default=1024, type=int, help="The maximum number of tokens to generate.")
+    parser.add_argument("--horizon", default=2048, type=int, help="The maximum number of tokens to generate.")
     parser.add_argument("--new-token-num", default=None, type=int, help="The number of new tokens to generate before calling the value function."
                                                                         "None means using the complete horizon (args.horizon).")
     parser.add_argument("--rollout", default=16, type=int, help="The maximum number of rollouts for PG-TD.")
@@ -228,15 +228,15 @@ if __name__ == '__main__':
     parser.add_argument("--dataset", default="apps", type=str, choices=["apps"])
     parser.add_argument("-i", "--index", default=None, type=int)
     parser.add_argument("-s","--start", default=0, type=int)
-    parser.add_argument("-e","--end", default=200, type=int)
+    parser.add_argument("-e","--end", default=614, type=int)
     parser.add_argument("--indices", default=None, type=str)
 
     parser.add_argument("--save", type=str, default="./results", help="Directory to save generated code.")
     parser.add_argument("--prefix", type=str, default="t-", help="Prefix of generated code file.")
-    parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("-d", "--debug", default=True, action="store_true")
     parser.add_argument('--no-cuda', action='store_true', default=False)
 
-    parser.add_argument('--rerun', action='store_true', default=False, help="If True, rerun if the output file already exists.")
+    parser.add_argument('--rerun', action='store_true', default=True, help="If True, rerun if the output file already exists.")
     parser.add_argument('--no-seq-cache', action='store_true', default=False)
     parser.add_argument('--no-prompt-cache', action='store_true', default=False)
     parser.add_argument('--top-k-cache-steps', type=int, default=1024, help="Number of forward steps to cache top k caches, default 1024 means the whole horizon.")

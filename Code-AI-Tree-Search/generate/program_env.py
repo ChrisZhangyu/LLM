@@ -31,6 +31,7 @@ class ProgramEnv(ABC):
         # state -> reward
         # we may need to retrieve the states (programs) in the order they were saved, so use OrderedDict
         self.cached_reward = OrderedDict()
+        self.cached_error = OrderedDict()
 
     """
         s是父节点的state, a是当前节点的action。代码生成里，action就是要生成的字符。state保存了已经生成的所有字符
@@ -141,14 +142,22 @@ class APPSProgramEnv(ProgramEnv):
         # 如果state的序列已经计算过奖励值了直接返回，cache会保存已经计算过的state序列的奖励值
         if tuple(s) in self.cached_reward.keys() and mode == 'train':
             # cache rewards for training
-            return self.cached_reward[tuple(s)]
+            return self.cached_reward[tuple(s)], self.cached_error[tuple(s)]
         # 将状态转换成程序，状态现在是一堆数值，调用tokenizer的decode方法
         output_str = self.convert_state_to_program(s)
         # 计算奖励，prob_path是外部给的，
         #  这里的reward就是通过率，通过执行代码的测试用例计算出来
-        reward = compute_reward(self.prob_path, output_str, mode=mode, public_test_cases=self.public_test_cases)
+        reward, test_info = compute_reward(self.prob_path, output_str, mode=mode, public_test_cases=self.public_test_cases)
+        if not isinstance(test_info, str):
+            info = test_info[1]
+            reflexion_error = test_info[2]
+        else:
+            reflexion_error = test_info
+
+        # node.info['reflexion_feedback'] = reflexion_error
 
         if mode == 'train':
             self.cached_reward[tuple(s)] = reward
+            self.cached_error[tuple(s)] = reflexion_error
 
-        return reward
+        return reward, reflexion_error

@@ -9,9 +9,12 @@ https://github.com/hendrycks/apps/blob/83d925041b1c43c32b56d444bb315f729f4ff633/
 """
 
 
-def _temp_run(prob_path, output_str, mode, public_test_cases, result):
-    result.append(
-        test_util.run_test(prob_path=prob_path, test=output_str, mode=mode, public_test_cases=public_test_cases))
+def _temp_run(prob_path, output_str, mode, public_test_cases, result, error_queue):
+    try:
+        result.append(
+            test_util.run_test(prob_path=prob_path, test=output_str, mode=mode, public_test_cases=public_test_cases))
+    except Exception as e:
+        error_queue.put(e)
 
 
 def check_correctness(prob_path, output_str, mode, public_test_cases):
@@ -22,11 +25,15 @@ def check_correctness(prob_path, output_str, mode, public_test_cases):
     manager = multiprocessing.Manager()
     # manager创建了一个共享的数据结构，用于进程通信，这是并发安全的
     result = manager.list()
+    error_queue = multiprocessing.Queue()
     # 创建子进程, target是要执行的函数，args是待执行函数所需要的参数
-    p = multiprocessing.Process(target=_temp_run, args=(prob_path, output_str, mode, public_test_cases, result))
+    p = multiprocessing.Process(target=_temp_run, args=(prob_path, output_str, mode, public_test_cases, result, error_queue))
     p.start()
     p.join(timeout=10)
     # 这里可以捕获异常，加入reflexion的方法
+    reflexion_error = "None error"
+    if not error_queue:
+        reflexion_error += error_queue.get(block=False)
     if p.is_alive():
         p.kill()
     if not result:
@@ -36,7 +43,7 @@ def check_correctness(prob_path, output_str, mode, public_test_cases):
         avg_number_tests = 21
         # 21搁-1
         result = [[-1] * avg_number_tests]
-    return result[0]
+    return result[0], reflexion_error
 
 
 def compute_reward(prob_path, output_str, mode = 'train', public_test_cases = None, return_info = False):
@@ -45,9 +52,10 @@ def compute_reward(prob_path, output_str, mode = 'train', public_test_cases = No
     It is rewarded by the number of tests passed. When passing the same number of tests.
     """
     # from https://github.com/hendrycks/apps/blob/83d925041b1c43c32b56d444bb315f729f4ff633/eval/test_one_solution.py#L141
+    reflexion_error = "None error"
     try:
         # 检查正确性，通过直接运行代码
-        curr_res = check_correctness(prob_path, output_str, mode, public_test_cases)
+        curr_res, reflexion_error = check_correctness(prob_path, output_str, mode, public_test_cases)
         fixed = []
         # 转换一下格式
         for e in curr_res:
@@ -72,9 +80,9 @@ def compute_reward(prob_path, output_str, mode = 'train', public_test_cases = No
     if return_info:
         info = {"compile_error": curr_res.count(-2) / len(curr_res),
                 "runtime_error": curr_res.count(-1) / len(curr_res)}
-        return pass_rate, info
+        return pass_rate, info, reflexion_error
     else:
-        return pass_rate
+        return pass_rate, reflexion_error
 
 
 def get_program_quality(s):

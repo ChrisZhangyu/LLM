@@ -7,6 +7,7 @@ env.action_space
 env.transition(s ,a , is_model_dynamic)
 env.equality_operator(s1, s2)
 """
+import logging
 import random
 import itertools
 import warnings
@@ -93,6 +94,7 @@ def mcts_procedure(ag, tree_policy, env, done, root = None, rollout_weight = 1.,
         # 如果走到了cNode，那么就与环境交互，把父节点的状态加上当前结点的action作为新状态，并计算新状态的奖励值，进入下一个判断
         #       遍历当前结点的子节点，如果子节点的状态和新状态相同，那么进入到子节点中，如果都不相同，则退出选择阶段，说明当前的状态确实是新状态
         while select:
+
             # decisionNode表示已有树节点，选择阶段直接选择策略函数返回值最大的那个
             if type(node) == DecisionNode:  # DecisionNode
                 if node.is_terminal:
@@ -135,6 +137,7 @@ def mcts_procedure(ag, tree_policy, env, done, root = None, rollout_weight = 1.,
         # Expansion
         # If node is a decision node, then it must be a terminal node, do nothing here
         # 根据前面的逻辑，走到这一步时的node指向的肯定是cNode结点，如果是dNode，说明已经走到了终止符号，即前面的代码走到了第96行，然后跳转到当前行
+
         if type(node) == ChanceNode:
             # 为当前节点创建子节点，state_p为新状态，子节点类型都是cNode
             node.children.append(
@@ -146,6 +149,7 @@ def mcts_procedure(ag, tree_policy, env, done, root = None, rollout_weight = 1.,
         # now `rewards` collected all rewards in the ChanceNodes above this node
         assert (type(node) == DecisionNode)
         state = node.state
+
         if ag.dp is None:
             t = 0
             estimate = 0
@@ -167,13 +171,15 @@ def mcts_procedure(ag, tree_policy, env, done, root = None, rollout_weight = 1.,
                     # 利用value model估计价值，传统的价值计算是通过从当前节点一直模拟到终点，然后计算结果，算出这一条路径的价值，本文是直接用transformer估计
                     estimate = ag.dp.get_value(state)
                 else:
+
                     # follow the default policy to get a terminal state
-                    state = ag.dp.get_predict_sequence(state)
+                    state = ag.dp.get_predict_sequence(state, None, node)
                     # reward就是通过率
-                    estimate = env.get_reward(state)
+                    estimate, reflexion_error = env.get_reward(state, node)
 
                     # save this information for demo
                     node.info['complete_program'] = state
+                    node.info['reflexion_error'] = reflexion_error
             else:
                 # the rewards are defined on terminating actions, the terminal states have no rewards
                 estimate = 0
@@ -183,6 +189,7 @@ def mcts_procedure(ag, tree_policy, env, done, root = None, rollout_weight = 1.,
         node.visits += 1
         node = node.parent
         assert (type(node) == ChanceNode)
+
         while node:
             if len(rewards) != 0:
                 # 价值估计

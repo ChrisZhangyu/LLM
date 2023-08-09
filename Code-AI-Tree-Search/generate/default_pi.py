@@ -1,3 +1,4 @@
+import logging
 import time
 import warnings
 from abc import abstractmethod
@@ -17,7 +18,7 @@ class DefaultPolicyHeuristic:
         self.time_stamps = []  # time stamp when a new sample is generated
 
     @abstractmethod
-    def get_predict_sequence(self, state, horizon = None):
+    def get_predict_sequence(self, state, horizon=None):
         pass
 
     @abstractmethod
@@ -39,13 +40,13 @@ class APPSHeuristic(DefaultPolicyHeuristic):
                  horizon,
                  device,
                  env,
-                 value_model = None,
-                 new_token_num = None,
-                 use_seq_cache = False,  # disable all caching by default
-                 use_prompt_cache = False,
-                 top_k_cache_steps = 0,
-                 ts_mode = 'best',
-                 debug = False):
+                 value_model=None,
+                 new_token_num=None,
+                 use_seq_cache=False,  # disable all caching by default
+                 use_prompt_cache=False,
+                 top_k_cache_steps=0,
+                 ts_mode='best',
+                 debug=False):
         super(APPSHeuristic, self).__init__(k=k, horizon=horizon, env=env)
 
         self.tokenizer = tokenizer
@@ -108,7 +109,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
 
         return self.get_predict_sequence(state, horizon=horizon)
 
-    def get_predict_sequence(self, state, horizon = None):
+    def get_predict_sequence(self, state, horizon=None, node=None):
         """
         Args:
             horizon: return a new sequence with this extra length
@@ -116,18 +117,23 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             Get the most likely sequence starting from state.
         """
         with torch.no_grad():
-            encoded_ids = state  # as a list
-            input_ids = torch.LongTensor(encoded_ids).unsqueeze(0).to(self.device)
 
+            encoded_ids = state  # as a list
             if self.use_seq_cache:
                 # seq_cache会存储之前生成过的token序列，节省计算时间
                 output_ids = self.seq_cache.get(encoded_ids)
                 if output_ids is not None:
                     return output_ids
-
             if horizon is None:
                 horizon = self.horizon
 
+            input_ids = torch.LongTensor(encoded_ids).unsqueeze(0).to(self.device)
+            # reflexion加入的地方
+            feedback = node.info.get("reflexion_error") if node.info.get("reflexion_error") else "None error"
+            feedback_prompt = f"This is the exception from your previous code：\n{feedback}"
+            feedback_prompt_ids = self.tokenizer.encode(feedback_prompt, return_tensors="pt").to(self.device)
+            input_ids = torch.cat((feedback_prompt_ids, input_ids), 1)
+            # input_ids = self.get_input_with_reflexion_prompt(feedback, state)
             start_time = time.time()
 
             sample_mode = (self.ts_mode == 'sample')
@@ -142,7 +148,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
                 return_dict_in_generate=True,
                 output_hidden_states=True,
                 output_scores=True,
-                max_length=horizon,
+                max_new_tokens=horizon,
                 use_cache=True  # huggingface default cache is always enabled
             )
 
@@ -212,7 +218,6 @@ class APPSHeuristic(DefaultPolicyHeuristic):
 
             encoded_ids = state
             input_ids = torch.LongTensor(encoded_ids).unsqueeze(0).to(self.device)
-
             start_time = time.time()
             # 将state作为输入传入模型，生成k个最可能的字符, generate方法有待研究
             model_output = self.model.generate(
@@ -226,7 +231,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
                 use_cache=True,
             )
             # debug模式下会打印模型的运行时间
-            if self.debug: print('generate top-k time: ' + str(time.time() - start_time))
+            logging.info('generate top-k time: ' + str(time.time() - start_time))
             # model_output的数据类型有待考证。根据代码推测，模型的输出包括token本身及token的score
             top_k_scores, top_k_tokens = torch.topk(model_output.scores[0][0], k=self.k, sorted=True)
             # 对score归一化
@@ -241,3 +246,30 @@ class APPSHeuristic(DefaultPolicyHeuristic):
 
         if self.top_k_cache_steps > 0:
             self.top_k_cache.clear(new_state)
+
+    def get_input_with_reflexion_prompt(self,
+                                        state,
+                                        feedback="",
+                                        ):
+        prev_func_impl = self.seq_cache.get(reflexion=True)
+        import reflexion_prompt as prompt
+        feedback = self.tokenizer.decode(feedback[0])
+
+        self_reflection_input = prompt.PY_SELF_REFLECTION_CHAT_INSTRUCTION_V2 + f'\n\n[function impl]:\n{prev_func_impl}\n\n[unit test results]:\n{feedback}\n\n[self-reflection]:'
+        with open("self_reflection_input.txt", "w") as f:
+            f.write(self_reflection_input)
+        self_reflection_input = self.tokenizer.encode(self_reflection_input, return_tensors="pt").to(self.model.device)
+        self_reflection = self.model.generate(self_reflection_input, max_new_tokens=1024, use_cache=True)
+        #   解码成字符串
+        self_reflection = self.tokenizer.decode(self_reflection[0])
+
+        final_input = f"[previous impl]:\n{prev_func_impl}\n\n[unit test results from previous " \
+                      f"impl]:\n{feedback}\n\n[reflection on previous impl]:\n{self_reflection}\n\n[partial code you have generated]{state}[improve" \
+                      f"d impl]"
+
+        with open("self_reflection_output.txt", "w") as f:
+            f.write(self_reflection)
+
+        final_input = self.tokenizer.encode(final_input, return_tensors="pt").to(self.model.device)
+
+        return final_input

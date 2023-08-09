@@ -87,12 +87,18 @@ class GPTSeqCache:
         query_ids = tuple(query_ids)
         self.cache[query_ids] = output_ids
 
-    def get(self, query_ids):
-        for input_ids, output_ids in self.cache.items():
-            if query_ids == output_ids[:len(query_ids)]:
-                return output_ids
+    def get(self, query_ids=None, reflexion=False):
+        # reflexion每次得到上一次生成的代码
+        if reflexion and len(self.cache) != 0:
+            return self.cache[list(self.cache.keys())[-1]]
+        else:
+            for input_ids, output_ids in self.cache.items():
+                if query_ids == output_ids[:len(query_ids)]:
+                    return output_ids
 
         return None
+
+
 
     def clear(self, new_state):
         self.cache = {input_ids: output_ids for input_ids, output_ids in self.cache.items() if new_state == output_ids[:len(new_state)]}
