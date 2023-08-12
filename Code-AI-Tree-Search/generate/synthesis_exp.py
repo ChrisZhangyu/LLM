@@ -233,7 +233,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--save", type=str, default="./results", help="Directory to save generated code.")
     parser.add_argument("--prefix", type=str, default="t-", help="Prefix of generated code file.")
-    parser.add_argument("-d", "--debug", default=True, action="store_true")
+    parser.add_argument("-d", "--debug", default=False, action="store_true")
     parser.add_argument('--no-cuda', action='store_true', default=False)
 
     parser.add_argument('--rerun', action='store_true', default=True, help="If True, rerun if the output file already exists.")

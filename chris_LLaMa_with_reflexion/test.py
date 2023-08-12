@@ -96,9 +96,17 @@ def get_reward():
     return r1, r2
 
 
+def delete_log():
+    path = "../Code-AI-Tree-Search/generate/results"
+    files = os.listdir(path)
+    log_files = [i for i in files if i.endswith(".log")]
+    for file in log_files:
+        os.remove(os.path.join(path, file))
+
+
 if __name__ == '__main__':
-    try:
-        estimate, reflexion_error = get_reward()
-    except Exception as e:
-        raise e
-    # print(not "")
+    # try:
+    #     estimate, reflexion_error = get_reward()
+    # except Exception as e:
+    #     raise e
+    delete_log()
