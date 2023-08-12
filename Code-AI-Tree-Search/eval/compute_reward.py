@@ -10,11 +10,11 @@ https://github.com/hendrycks/apps/blob/83d925041b1c43c32b56d444bb315f729f4ff633/
 
 
 def _temp_run(prob_path, output_str, mode, public_test_cases, result, error_queue):
-    try:
+    # try:
         result.append(
             test_util.run_test(prob_path=prob_path, test=output_str, mode=mode, public_test_cases=public_test_cases))
-    except Exception as e:
-        error_queue.put(e)
+    # except Exception as e:
+    #     error_queue.put(e)
 
 
 def check_correctness(prob_path, output_str, mode, public_test_cases):

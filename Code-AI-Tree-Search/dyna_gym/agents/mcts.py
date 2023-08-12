@@ -175,7 +175,7 @@ def mcts_procedure(ag, tree_policy, env, done, root = None, rollout_weight = 1.,
                     # follow the default policy to get a terminal state
                     state = ag.dp.get_predict_sequence(state, None, node)
                     # reward就是通过率
-                    estimate, reflexion_error = env.get_reward(state, node)
+                    estimate, reflexion_error = env.get_reward(state)
 
                     # save this information for demo
                     node.info['complete_program'] = state

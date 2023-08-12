@@ -129,10 +129,10 @@ class APPSHeuristic(DefaultPolicyHeuristic):
 
             input_ids = torch.LongTensor(encoded_ids).unsqueeze(0).to(self.device)
             # reflexion加入的地方
-            feedback = node.info.get("reflexion_error") if node.info.get("reflexion_error") else "None error"
-            feedback_prompt = f"This is the exception from your previous code：\n{feedback}"
-            feedback_prompt_ids = self.tokenizer.encode(feedback_prompt, return_tensors="pt").to(self.device)
-            input_ids = torch.cat((feedback_prompt_ids, input_ids), 1)
+            # feedback = node.info.get("reflexion_error") if node.info.get("reflexion_error") else "None error"
+            # feedback_prompt = f"This is the exception from your previous code：\n{feedback}"
+            # feedback_prompt_ids = self.tokenizer.encode(feedback_prompt, return_tensors="pt").to(self.device)
+            # input_ids = torch.cat((feedback_prompt_ids, input_ids), 1)
             # input_ids = self.get_input_with_reflexion_prompt(feedback, state)
             start_time = time.time()
 

@@ -187,7 +187,7 @@ if __name__ == '__main__':
     parser.add_argument("--load-value", default=None, type=str, help="An optional value function for evaluating partial programs.")
     parser.add_argument("-t","--test-loc", default="../data_split/test.json", type=str, help="This file specifies the locations of the test set of the code dataset.")
     parser.add_argument("--width", default=3, type=int, help="The maximum number of children for any node.")
-    parser.add_argument("--horizon", default=2048, type=int, help="The maximum number of tokens to generate.")
+    parser.add_argument("--horizon", default=1024, type=int, help="The maximum number of tokens to generate.")
     parser.add_argument("--new-token-num", default=None, type=int, help="The number of new tokens to generate before calling the value function."
                                                                         "None means using the complete horizon (args.horizon).")
     parser.add_argument("--rollout", default=16, type=int, help="The maximum number of rollouts for PG-TD.")
@@ -239,7 +239,7 @@ if __name__ == '__main__':
     parser.add_argument('--rerun', action='store_true', default=True, help="If True, rerun if the output file already exists.")
     parser.add_argument('--no-seq-cache', action='store_true', default=False)
     parser.add_argument('--no-prompt-cache', action='store_true', default=False)
-    parser.add_argument('--top-k-cache-steps', type=int, default=1024, help="Number of forward steps to cache top k caches, default 1024 means the whole horizon.")
+    parser.add_argument('--top-k-cache-steps', type=int, default=2048, help="Number of forward steps to cache top k caches, default 1024 means the whole horizon.")
     parser.add_argument('--seed', type=int, default=0, help='random seed (default: 0)')
 
     # this can be 'desc' for parsing from problem description, 'half' for using half of input_output for public test cases,
