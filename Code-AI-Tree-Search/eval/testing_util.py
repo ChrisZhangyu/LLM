@@ -48,7 +48,7 @@ def timeout_handler(signum, frame):
     raise TimeoutException
 
 
-# linux下这个才不会出错
+# linux下这个才不会出错,定义了出现SIGALRM信号时的处理方法,SIGALRM是一个计时器信号
 signal.signal(signal.SIGALRM, timeout_handler)
 timeout = 4  # seconds
 
@@ -137,26 +137,27 @@ def get_solutions(problem_list, prob_index):
 
 
 def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: int = None,
-             test: str = None, debug: bool = False, mode: str = 'test', public_test_cases=None):
+             test: str = None, debug: bool = False, mode: str = 'test', public_test_cases=None, error_queue=None):
     """
     if test is not None it'll try to run the code.
     otherwise it'll just return an input and output pair.
     """
+    # 看测试用例是由什么给出的
     if prob_path is None and problem_list is None:
         print("please provide either prob_path or problem_list")
         exit()
-
+    # debug模式会计算时间
     if debug:
         print(f"start = {datetime.now().time()}")
     if prob_path is not None:
         root = prob_path
     elif problem_list is not None:
         root = problem_list[prob_index]
-
+    # root保存了测试用例的文件路径，通过这个函数得到用例的每对输入输出
     in_outs = get_test_cases(root, mode, public_test_cases, debug=debug)
     if in_outs is None:
         raise Exception(f"input_output not found")
-
+    # 测试有两种模式，一种是通过函数调用，另一种是通过程序的输入输出流，这里in_outs是字典，如果没有"fn_name"就默认是输入输出流方式运行程序
     if in_outs.get("fn_name") is None:
         which_type = CODE_TYPE.standard_input  # Standard input
         method_name = None
@@ -166,6 +167,7 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
 
     # else:
     #    continue
+    # test保存了待测试的程序
     if test is None:
         return in_outs
     elif test is not None:
@@ -173,6 +175,7 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
         reliability_guard
 
         results = []
+        # 导入测试所需要的模块
         sol = "import sys\nimport time\nimport itertools\nfrom itertools import accumulate, product, permutations, combinations\nimport collections\nfrom collections import Counter, OrderedDict, deque, defaultdict, ChainMap\nfrom functools import lru_cache\nimport math\nfrom math import sqrt, sin, cos, tan, ceil, fabs, floor, gcd, exp, log, log2\nimport fractions\nfrom typing import List, Tuple\nimport numpy as np\nimport random\nimport heapq\nfrom heapq import *\n"
         if debug:
             print(f"loading test code = {datetime.now().time()}")
@@ -183,6 +186,8 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                 print(f"sol = {sol}")
             signal.alarm(timeout)
             try:
+                # pyext库方法，在运行中动态创建一个Module，
+                # RuntimeModule.from_string('module_name', 'module_docstring', mystr)
                 tmp_sol = RuntimeModule.from_string("tmp_sol", "", sol)
                 if "class Solution" not in test:
                     tmp = tmp_sol
@@ -190,6 +195,8 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                     tmp = tmp_sol.Solution()
                 signal.alarm(0)
             except Exception as e:
+                if error_queue is not None:
+                    error_queue.put(e)
                 signal.alarm(0)
                 print(f"type 0 compilation error = {e}")
                 results.append(-2)
@@ -202,6 +209,7 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
 
             new_test = []
             for x in tmp_test:
+                # 把每一行除了import和from的语句重新组织
                 if (not x.startswith("from ")) and (not x.startswith("import ")):
                     new_test.append("\t" + x + "\n")
                 else:
@@ -233,8 +241,10 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                 tmp = tmp_sol
                 signal.alarm(0)
             except Exception as e:
+                if error_queue is not None:
+                    error_queue.put(e)
                 signal.alarm(0)
-                print(f"type 1 compilation error = {e}")
+                print(f"error_queue:{error_queue is not None} type 1 compilation error = {e}")
                 results.append(-2)
                 return results
             signal.alarm(0)
@@ -298,6 +308,8 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                     # reset the alarm
                     signal.alarm(0)
                 except Exception as e:
+                    if error_queue is not None:
+                        error_queue.put(e)
                     signal.alarm(0)
                     faulthandler.disable()
                     print(f"Standard input runtime error or time limit exceeded error = {e}")
@@ -326,6 +338,8 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                         passed = True
                     except Exception as e:
                         # runtime error or took too long
+                        if error_queue is not None:
+                            error_queue.put(e)
                         signal.alarm(0)
                         print(f"Call-based runtime error or time limit exceeded error = {repr(e)}{e}")
                         results.append(-1)
@@ -362,6 +376,8 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                         if isinstance(output[0], str):
                             tmp_result = tmp_result or ([e.strip() for e in output] == in_outs["outputs"][index])
                 except Exception as e:
+                    if error_queue is not None:
+                        error_queue.put(e)
                     print(f"Failed check1 exception = {e}")
                     pass
 
@@ -385,6 +401,8 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                     if isinstance(in_outs["outputs"][index], list):
                         tmp_result = tmp_result or (output == in_outs["outputs"][index])
                 except Exception as e:
+                    if error_queue is not None:
+                        error_queue.put(e)
                     print(f"Failed check2 exception = {e}")
                     pass
 
@@ -414,6 +432,8 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                     if isinstance(in_outs["outputs"][index], list):
                         tmp_result = tmp_result or (output == in_outs["outputs"][index])
                 except Exception as e:
+                    if error_queue is not None:
+                        error_queue.put(e)
                     print(f"Failed check3 exception = {e}")
                     pass
 
@@ -423,6 +443,8 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                     tmp_result = tmp_result or (
                             (len(output_float) == len(gt_float)) and np.allclose(output_float, gt_float))
                 except Exception as e:
+                    if error_queue is not None:
+                        error_queue.put(e)
                     pass
                 try:
                     if isinstance(output[0], list):
@@ -431,6 +453,8 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                         tmp_result = tmp_result or (
                                 (len(output_float) == len(gt_float)) and np.allclose(output_float, gt_float))
                 except Exception as e:
+                    if error_queue is not None:
+                        error_queue.put(e)
                     pass
 
                 if tmp_result == True:
@@ -447,6 +471,8 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                 try:
                     tmp_result = (output == in_outs["outputs"][index])
                 except Exception as e:
+                    if error_queue is not None:
+                        error_queue.put(e)
                     print(f"Failed check4 exception = {e}")
                     continue
 
@@ -470,6 +496,8 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                     tmp_result = (set(frozenset(s) for s in output) == set(
                         frozenset(s) for s in in_outs["outputs"][index]))
                 except Exception as e:
+                    if error_queue is not None:
+                        error_queue.put(e)
                     print(f"Failed check5 exception = {e}")
 
                 # if they are all numbers, round so that similar numbers are treated as identical
@@ -478,6 +506,8 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                                                 set(frozenset(round(float(t), 3) for t in s) for s in
                                                     in_outs["outputs"][index]))
                 except Exception as e:
+                    if error_queue is not None:
+                        error_queue.put(e)
                     print(f"Failed check6 exception = {e}")
 
                 if tmp_result == True and debug:

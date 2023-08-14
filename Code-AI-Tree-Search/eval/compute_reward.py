@@ -10,11 +10,10 @@ https://github.com/hendrycks/apps/blob/83d925041b1c43c32b56d444bb315f729f4ff633/
 
 
 def _temp_run(prob_path, output_str, mode, public_test_cases, result, error_queue):
-    # try:
-        result.append(
-            test_util.run_test(prob_path=prob_path, test=output_str, mode=mode, public_test_cases=public_test_cases))
-    # except Exception as e:
-    #     error_queue.put(e)
+
+    result.append(
+        test_util.run_test(prob_path=prob_path, test=output_str, mode=mode, public_test_cases=public_test_cases, error_queue=error_queue))
+
 
 
 def check_correctness(prob_path, output_str, mode, public_test_cases):
@@ -32,8 +31,10 @@ def check_correctness(prob_path, output_str, mode, public_test_cases):
     p.join(timeout=10)
     # 这里可以捕获异常，加入reflexion的方法
     reflexion_error = "None error"
-    if not error_queue:
-        reflexion_error += error_queue.get(block=False)
+    # print(f"error_queue: {not error_queue.empty()}")
+    if not error_queue.empty():
+        reflexion_error = str(error_queue.get(block=False))
+    # print(f"test error: {reflexion_error}")
     if p.is_alive():
         p.kill()
     if not result:

@@ -148,7 +148,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
                 return_dict_in_generate=True,
                 output_hidden_states=True,
                 output_scores=True,
-                max_new_tokens=horizon,
+                max_length=horizon,
                 use_cache=True  # huggingface default cache is always enabled
             )
 
