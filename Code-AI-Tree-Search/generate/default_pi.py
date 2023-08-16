@@ -135,14 +135,14 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             feedback_prompt = f"This is the exception from your previous code：\n{self.feedback}"
             print(f"feedback: {self.feedback}")
             feedback_prompt_ids = self.tokenizer.encode(feedback_prompt, return_tensors="pt").to(self.device)
-            input_ids = torch.cat((feedback_prompt_ids, input_ids), 1)
-            # input_ids = self.get_input_with_reflexion_prompt(feedback, state)
+            
+            input_with_feedback_ids = torch.cat((feedback_prompt_ids, input_ids), 1)
             start_time = time.time()
 
             sample_mode = (self.ts_mode == 'sample')
 
             model_output = self.model.generate(
-                input_ids,
+                input_with_feedback_ids,
                 top_k=self.k,
                 num_beams=(1 if sample_mode else self.num_beams),  # if sampling enabled, beam should always be 1
                 num_return_sequences=self.num_beams,

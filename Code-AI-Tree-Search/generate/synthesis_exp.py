@@ -157,14 +157,15 @@ def main():
         else:
             # if time per sample is not available, use the total time
             time_elapsed = time.time() - start
-
+        # try:
         output_strs = [env.convert_state_to_program(s) for s in states]
 
         train_rewards = [env.get_reward(s, mode='train') for s in states]
 
         test_rewards = [env.get_reward(s, mode='test') for s in states]
 
-        best_idx = np.argmax(train_rewards)
+        best_idx = np.argmax([item[0] for item in train_rewards])
+       
 
         print('final program:')
         print(output_strs[best_idx])
@@ -175,8 +176,13 @@ def main():
 
         with open(code_loc, "w") as f:
             json.dump({'codes': output_strs, 'rewards': test_rewards, 'train rewards': train_rewards,
-                       'time': time_elapsed, 'sample times': info['sample_times']}, f)
-
+                   'time': time_elapsed, 'sample times': info['sample_times']}, f)
+        # except Exception as e:
+        #     print()
+        #     print(f"get_some_error:{e}")
+        #     with open(code_loc, "w") as f:
+        #         json.dump({'codes': output_strs, 'rewards': test_rewards, 'train rewards': train_rewards,
+        #                'time': time_elapsed, 'sample times': info['sample_times']}, f)
 
 if __name__ == '__main__':
     import argparse
@@ -228,7 +234,7 @@ if __name__ == '__main__':
     parser.add_argument("--dataset", default="apps", type=str, choices=["apps"])
     parser.add_argument("-i", "--index", default=None, type=int)
     parser.add_argument("-s","--start", default=0, type=int)
-    parser.add_argument("-e","--end", default=614, type=int)
+    parser.add_argument("-e","--end", default=200, type=int)
     parser.add_argument("--indices", default=None, type=str)
 
     parser.add_argument("--save", type=str, default="./results", help="Directory to save generated code.")
