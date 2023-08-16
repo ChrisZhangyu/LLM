@@ -1,11 +1,12 @@
 import logging
 import re
+import sys
 import time
+sys.path.append('../../')
 
 import torch
 import reflexion_prompt as prompt
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, LlamaForCausalLM
-
 
 def get_model_by_name(model_name, device):
     model_config = AutoConfig.from_pretrained(model_name, device=device, trust_remote_code=True)

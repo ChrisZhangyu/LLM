@@ -183,7 +183,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--arch", default="chatGLM", choices=transformers.GPT2_PRETRAINED_MODEL_ARCHIVE_LIST)
-    parser.add_argument("-l", "--load", default="../../model/codegeex2-6b", type=str)
+    parser.add_argument("-l", "--load", default="../../model/llama_7b", type=str)
     parser.add_argument("--load-value", default=None, type=str, help="An optional value function for evaluating partial programs.")
     parser.add_argument("-t","--test-loc", default="../data_split/test.json", type=str, help="This file specifies the locations of the test set of the code dataset.")
     parser.add_argument("--width", default=3, type=int, help="The maximum number of children for any node.")
