@@ -149,8 +149,8 @@ class APPSProgramEnv(ProgramEnv):
         #  这里的reward就是通过率，通过执行代码的测试用例计算出来
         reward, test_info = compute_reward(self.prob_path, output_str, mode=mode, public_test_cases=self.public_test_cases)
         if not isinstance(test_info, str):
-            info = test_info[1]
-            reflexion_error = test_info[2]
+            info = test_info[0]
+            reflexion_error = test_info[1]
         else:
             reflexion_error = test_info
 
