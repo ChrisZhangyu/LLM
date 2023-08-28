@@ -42,8 +42,17 @@ def reindent_code(codestr):
 
 
 def generate_apps_prompt(args, test_case_path, prompt_path, solutions_path, tokenizer, starter_path=None):
-
     _input = "\nQUESTION:\n"
+    # 这个表示ANSWER字符串在这里加还是在default_pi里加，因为如果要使用llama+反馈的方法需要在default_pi里加ANSWER
+    add_answer = True
+    # guanaco的 prompt的模板，注意与llama2完全不同，如果使用llama2的模板就会导致生成的字符全为unk
+    import re
+    llama_pattern = re.compile(r'.*llama.*', re.IGNORECASE)
+    if llama_pattern.match(type(tokenizer).__name__):
+        instruct = f'''You are a code expert.You will be given the problem description and you just need to give the code to solve the QUESTION.You will have several chances to generate code for the same problem, each time giving you the errors of the previous code.\n\n'''
+        _input = instruct + _input
+        add_answer = False
+
     with open(prompt_path, "r", encoding="utf-8") as f:
         data = f.readlines()
         data = "".join(data)
@@ -65,8 +74,11 @@ def generate_apps_prompt(args, test_case_path, prompt_path, solutions_path, toke
     else:
         _input += "\nUse Call-Based format"  # \n"
 
+    _input += "\n-----PREVIOUS CODE-----:\n"
+    _input += "\n-----EXCEPTION FROM YOUR PREVIOUS CODE-----:\n"
     _input += "\nANSWER:\n"
-
+    prompt_template = f'''### Human: {_input}\n### Assistant:'''
+    _input = prompt_template
     if args.peeking > 0.0:
         # Need to do some peeking.
 
@@ -97,11 +109,24 @@ def generate_apps_prompt(args, test_case_path, prompt_path, solutions_path, toke
     return _input, sample_sol
 
 
+def llama_prompt(func):
+    def wrapper(s):
+        # 如果使用llama相关模型则包装原来的函数，
+        temp_s = func(s)
+        import re
+        pattern = r"python(.*?)`"
+        code = re.findall(pattern, temp_s, re.DOTALL)
+        complete_code = "\n".join(code)
+        return complete_code
+    return wrapper
+
+
+@llama_prompt
 def get_output_str_from_state_for_apps(s):
     """
     Get the code from the transformer output
     """
-    # ?与数据内容有关，ANSWER后面可能保存的是代码
+    # ANSWER后面可能保存的是代码
     if "ANSWER:" in s:
         s = s.split("ANSWER:\n")[1]
 

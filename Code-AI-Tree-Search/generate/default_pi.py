@@ -129,20 +129,32 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             if horizon is None:
                 horizon = self.horizon
 
+            if node != None:
+                # reflexion加入的地方
+                input_prompt = self.tokenizer.decode(encoded_ids)
+                exception_str = "-----EXCEPTION FROM YOUR PREVIOUS CODE-----:"
+                # 找到exception字段
+                if exception_str in input_prompt:
+                    input_prompt_list = input_prompt.split(exception_str)
+                    input_prompt = input_prompt_list[0] + f"\n{exception_str}\n{self.feedback}\n" + input_prompt_list[1]
+                # 模型前一次生成的代码
+                if node.parent.parent != None:
+                    # state会包含之前的提示，并不是所有的字符都是生成的代码
+                    code = self.env.convert_state_to_program(node.parent.parent.state)
+                    previous_str = "-----PREVIOUS CODE-----:"
+                    # 找到previous字段
+                    if previous_str in input_prompt:
+                        input_prompt_list = input_prompt.split(previous_str)
+                        input_prompt = input_prompt_list[0] + f"\n{previous_str}\n{code}\n" + input_prompt_list[1]
+
+            encoded_ids = self.tokenizer.encode(input_prompt)
             input_ids = torch.LongTensor(encoded_ids).unsqueeze(0).to(self.device)
-            # reflexion加入的地方
 
-            feedback_prompt = f"This is the exception from your previous code：\n{self.feedback}"
-            print(f"feedback: {self.feedback}")
-            feedback_prompt_ids = self.tokenizer.encode(feedback_prompt, return_tensors="pt").to(self.device)
-            
-            input_with_feedback_ids = torch.cat((feedback_prompt_ids, input_ids), 1)
             start_time = time.time()
-
             sample_mode = (self.ts_mode == 'sample')
 
             model_output = self.model.generate(
-                input_with_feedback_ids,
+                inputs=input_ids,
                 top_k=self.k,
                 num_beams=(1 if sample_mode else self.num_beams),  # if sampling enabled, beam should always be 1
                 num_return_sequences=self.num_beams,
@@ -151,10 +163,10 @@ class APPSHeuristic(DefaultPolicyHeuristic):
                 return_dict_in_generate=True,
                 output_hidden_states=True,
                 output_scores=True,
-                max_length=horizon,
+                max_new_tokens=512,
                 use_cache=True  # huggingface default cache is always enabled
             )
-
+            # print(self.tokenizer.decode((model_output[0][0])))
             if self.top_k_cache_steps > 0:
                 if hasattr(model_output, 'beam_indices'):
                     # beam search output
@@ -224,7 +236,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             start_time = time.time()
             # 将state作为输入传入模型，生成k个最可能的字符, generate方法有待研究
             model_output = self.model.generate(
-                input_ids,
+                inputs=input_ids,
                 top_k=self.k,
                 num_beams=self.num_beams,
                 early_stopping=True,

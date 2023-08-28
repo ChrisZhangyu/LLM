@@ -7,30 +7,38 @@ sys.path.append('../../')
 import torch
 import reflexion_prompt as prompt
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig, LlamaForCausalLM
+from auto_gptq import AutoGPTQForCausalLM, BaseQuantizeConfig
 
 def get_model_by_name(model_name, device):
-    model_config = AutoConfig.from_pretrained(model_name, device=device, trust_remote_code=True)
-    tokenizer = AutoTokenizer.from_pretrained(model_name, device=device, config=model_config, trust_remote_code=True)
-    llama_pattern = re.compile(r'llama', re.IGNORECASE)
 
+
+    llama_pattern = re.compile(r'.*llama.*', re.IGNORECASE)
+    start = time.time()
     if  llama_pattern.match(model_name):
-        model = LlamaForCausalLM.from_pretrained(model_name, config=model_config)
+        # model = LlamaForCausalLM.from_pretrained(model_name, config=model_config)
+        tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True, add_bos_token=False)
+
+        model = AutoGPTQForCausalLM.from_quantized(model_name,
+                                                   revision="gptq-4bit-128g-actorder_True",
+                                                   inject_fused_attention=False,
+                                                   use_safetensors=True,
+                                                   trust_remote_code=False,
+                                                   device="cuda:0",
+                                                   use_triton=False,
+                                                   quantize_config=None)
     else:
+        model_config = AutoConfig.from_pretrained(model_name, device=device, trust_remote_code=True)
+        tokenizer = AutoTokenizer.from_pretrained(model_name, device=device, config=model_config,
+                                                  trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(model_name,
                                                      config=model_config,
                                                      trust_remote_code=True,
                                                      )
     model.to(device)
     model.eval()
+    end = time.time()
+    print(f"加载模型耗时:{end - start}")
 
-    # reflexion prompt
-    # input_ids = tokenizer.encode(prompt.PY_REFLEXION_CHAT_INSTRUCTION_V2, return_tensors="pt").to(device)
-    # logging.getLogger().setLevel(logging.INFO)
-    # logging.info("输入指令prompt")
-    # start = time.time()
-    # model.generate(input_ids, max_new_tokens=2048)
-    # end = time.time()
-    # logging.info(f"耗时{end - start}")
     if device == torch.device('cuda') and hasattr(model, 'parallelize'):
         model.parallelize()
 

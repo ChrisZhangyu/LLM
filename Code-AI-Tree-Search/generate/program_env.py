@@ -116,10 +116,11 @@ class APPSProgramEnv(ProgramEnv):
         gpt_args = SimpleNamespace(peeking=0.0)
         state, _ = generate_apps_prompt(gpt_args, test_case_path, prompt_path, solutions_path, tokenizer, starter_path)
 
+
         self.init_prompt = copy.copy(state)
 
         self.state = self.tokenizer.encode(state)
-        terminal_token = self.tokenizer.encode('<|endoftext|>')[0]
+        terminal_token = self.tokenizer.encode('<|endoftext|>')
 
         super(APPSProgramEnv, self).__init__(terminal_token=terminal_token, horizon=horizon)
 

@@ -6,7 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/chris_LLaMa_with_reflexion" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/reflexion" isTestSource="false" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.9" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.8 (base)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">

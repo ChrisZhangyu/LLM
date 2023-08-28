@@ -111,6 +111,7 @@ def main():
 
         # set up models
         dp = APPSHeuristic(
+
             tokenizer=tokenizer,
             model=model,
             value_model=value_model,
@@ -189,7 +190,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--arch", default="chatGLM", choices=transformers.GPT2_PRETRAINED_MODEL_ARCHIVE_LIST)
-    parser.add_argument("-l", "--load", default="../../model/llama_7b", type=str)
+    parser.add_argument("-l", "--load", default="../../../../autodl-fs/model/llama_2_70b_qlora_gptq", type=str)
     parser.add_argument("--load-value", default=None, type=str, help="An optional value function for evaluating partial programs.")
     parser.add_argument("-t","--test-loc", default="../data_split/test.json", type=str, help="This file specifies the locations of the test set of the code dataset.")
     parser.add_argument("--width", default=3, type=int, help="The maximum number of children for any node.")
@@ -234,7 +235,7 @@ if __name__ == '__main__':
     parser.add_argument("--dataset", default="apps", type=str, choices=["apps"])
     parser.add_argument("-i", "--index", default=None, type=int)
     parser.add_argument("-s","--start", default=0, type=int)
-    parser.add_argument("-e","--end", default=200, type=int)
+    parser.add_argument("-e","--end", default=1000, type=int)
     parser.add_argument("--indices", default=None, type=str)
 
     parser.add_argument("--save", type=str, default="./results", help="Directory to save generated code.")
