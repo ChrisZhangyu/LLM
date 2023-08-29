@@ -234,8 +234,8 @@ if __name__ == '__main__':
 
     parser.add_argument("--dataset", default="apps", type=str, choices=["apps"])
     parser.add_argument("-i", "--index", default=None, type=int)
-    parser.add_argument("-s","--start", default=0, type=int)
-    parser.add_argument("-e","--end", default=1000, type=int)
+    parser.add_argument("-s","--start", default=30, type=int)
+    parser.add_argument("-e","--end", default=100, type=int)
     parser.add_argument("--indices", default=None, type=str)
 
     parser.add_argument("--save", type=str, default="./results", help="Directory to save generated code.")
@@ -243,7 +243,7 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--debug", default=False, action="store_true")
     parser.add_argument('--no-cuda', action='store_true', default=False)
 
-    parser.add_argument('--rerun', action='store_true', default=True, help="If True, rerun if the output file already exists.")
+    parser.add_argument('--rerun', action='store_true', default=False, help="If True, rerun if the output file already exists.")
     parser.add_argument('--no-seq-cache', action='store_true', default=False)
     parser.add_argument('--no-prompt-cache', action='store_true', default=False)
     parser.add_argument('--top-k-cache-steps', type=int, default=2048, help="Number of forward steps to cache top k caches, default 1024 means the whole horizon.")

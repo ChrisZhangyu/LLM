@@ -77,7 +77,6 @@ def mcts_procedure(ag, tree_policy, env, done, root = None, rollout_weight = 1.,
         warnings.warn("How come rollout_weight > 1? Setting to 1.")
     # 对rollouts截断，weight表示缩放因子,值小于1
     rollouts = np.clip(int(ag.rollouts * rollout_weight), 1, ag.rollouts)
-
     print("Performing rollouts.")
     for _ in tqdm(range(rollouts)):
         # uct_multiple_exp不会有term_cond变量，uct_exp才会有
@@ -173,10 +172,9 @@ def mcts_procedure(ag, tree_policy, env, done, root = None, rollout_weight = 1.,
                 else:
 
                     # follow the default policy to get a terminal state
-                    state = ag.dp.get_predict_sequence(state, None, node)
+                    state = ag.dp.get_predict_sequence(state, None, None)
                     # reward就是通过率
                     estimate, reflexion_error = env.get_reward(state)
-
                     # save this information for demo
                     node.info['complete_program'] = state
                     ag.dp.feedback = reflexion_error

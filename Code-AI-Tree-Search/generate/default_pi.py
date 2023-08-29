@@ -2,10 +2,12 @@ import logging
 import time
 import warnings
 from abc import abstractmethod
+from typing import Optional, Union
 
 import torch
 import numpy as np
 
+from dyna_gym.agents.mcts import DecisionNode
 from transformer_utils.cache import GPTTopKCache, GPTSeqCache
 
 
@@ -18,7 +20,7 @@ class DefaultPolicyHeuristic:
         self.time_stamps = []  # time stamp when a new sample is generated
 
     @abstractmethod
-    def get_predict_sequence(self, state, horizon=None):
+    def get_predict_sequence(self, state, node=None, horizon=None):
         pass
 
     @abstractmethod
@@ -95,6 +97,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
 
         self.terminal_token = self.env.terminal_token
         self.feedback = "None error"
+        self.previous_code = ""
 
 
     def get_short_horizon_sequence(self, state):
@@ -111,10 +114,12 @@ class APPSHeuristic(DefaultPolicyHeuristic):
 
         return self.get_predict_sequence(state, horizon=horizon)
 
-    def get_predict_sequence(self, state, horizon=None, node=None):
+    def get_predict_sequence(self, state, node=None, horizon=None):
         """
         Args:
+            state: 当前结点所处环境的状态
             horizon: return a new sequence with this extra length
+            node_or_previous_code: 可能是之前生成的代码，也可能是MCTS的当前结点，取决于两种方案
         Returns:
             Get the most likely sequence starting from state.
         """
@@ -129,23 +134,28 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             if horizon is None:
                 horizon = self.horizon
 
-            if node != None:
-                # reflexion加入的地方
-                input_prompt = self.tokenizer.decode(encoded_ids)
-                exception_str = "-----EXCEPTION FROM YOUR PREVIOUS CODE-----:"
-                # 找到exception字段
-                if exception_str in input_prompt:
-                    input_prompt_list = input_prompt.split(exception_str)
-                    input_prompt = input_prompt_list[0] + f"\n{exception_str}\n{self.feedback}\n" + input_prompt_list[1]
-                # 模型前一次生成的代码
-                if node.parent.parent != None:
-                    # state会包含之前的提示，并不是所有的字符都是生成的代码
-                    code = self.env.convert_state_to_program(node.parent.parent.state)
-                    previous_str = "-----PREVIOUS CODE-----:"
-                    # 找到previous字段
-                    if previous_str in input_prompt:
-                        input_prompt_list = input_prompt.split(previous_str)
-                        input_prompt = input_prompt_list[0] + f"\n{previous_str}\n{code}\n" + input_prompt_list[1]
+            # 如果有exception_str的字段，说明需要exception
+            exception_str = "-----EXCEPTION FROM YOUR PREVIOUS CODE-----:"
+            input_prompt = self.tokenizer.decode(encoded_ids)
+            # 找到exception字段
+            if exception_str in input_prompt:
+                input_prompt_list = input_prompt.split(exception_str)
+                input_prompt = input_prompt_list[0] + f"\n{exception_str}\n{self.feedback}\n" + input_prompt_list[1]
+
+            # 如果有previous_str，说明需要之前的code
+            previous_str = "-----PREVIOUS CODE-----:"
+            # 找到previous字段
+            if previous_str in input_prompt:
+                input_prompt_list = input_prompt.split(previous_str)
+                # 如果node不是None，说明需要用node的父节点生成的代码当做previous字段，否则用模型上一次生成的代码做previous字段
+                if node is not None and node.parent.parent is not None:
+                    code = self.tokenizer.decode(node.parent.parent.state)
+                else:
+                    # if isinstance(self.previous_code, str):
+                    code = self.previous_code
+                    # else:
+                    #     code = self.tokenizer.decode(self.previous_code)
+                input_prompt = input_prompt_list[0] + f"\n{previous_str}\n{code}\n" + input_prompt_list[1]
 
             encoded_ids = self.tokenizer.encode(input_prompt)
             input_ids = torch.LongTensor(encoded_ids).unsqueeze(0).to(self.device)
@@ -199,7 +209,8 @@ class APPSHeuristic(DefaultPolicyHeuristic):
                 print('==== generated program ====')
                 print(self.env.convert_state_to_program(output_ids))
                 print('===========================')
-
+            temp_code = self.env.convert_state_to_program(output_ids)
+            self.previous_code = temp_code if temp_code else self.previous_code
             return output_ids
 
     def get_value(self, state):
@@ -228,7 +239,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
                 top_k_info = self.top_k_cache.get(state)
                 # 缓存没有会返回None，如果不为None说明缓存击中
                 if top_k_info is not None:
-                    if self.debug: print('top-k cache hit')
+                    print('top-k cache hit')
                     return top_k_info
 
             encoded_ids = state

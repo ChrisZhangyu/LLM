@@ -49,7 +49,7 @@ def generate_apps_prompt(args, test_case_path, prompt_path, solutions_path, toke
     import re
     llama_pattern = re.compile(r'.*llama.*', re.IGNORECASE)
     if llama_pattern.match(type(tokenizer).__name__):
-        instruct = f'''You are a code expert.You will be given the problem description and you just need to give the code to solve the QUESTION.You will have several chances to generate code for the same problem, each time giving you the errors of the previous code.\n\n'''
+        instruct = f'''You are a code expert.You will be given the problem description. You can only generate code and comments to solve the QUESTION.Your code will be tested so you don't have to run it yourself.You will have several chances to generate code for the same problem, each time  you will be given the errors of the previous code and you should revise your previous code according to the errors.'''
         _input = instruct + _input
         add_answer = False
 
@@ -74,9 +74,9 @@ def generate_apps_prompt(args, test_case_path, prompt_path, solutions_path, toke
     else:
         _input += "\nUse Call-Based format"  # \n"
 
-    _input += "\n-----PREVIOUS CODE-----:\n"
-    _input += "\n-----EXCEPTION FROM YOUR PREVIOUS CODE-----:\n"
-    _input += "\nANSWER:\n"
+    _input += "\n-----PREVIOUS CODE-----:"
+    _input += "\n-----EXCEPTION FROM YOUR PREVIOUS CODE-----:"
+    _input += "ANSWER:\n"
     prompt_template = f'''### Human: {_input}\n### Assistant:'''
     _input = prompt_template
     if args.peeking > 0.0:

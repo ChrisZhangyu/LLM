@@ -229,7 +229,7 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                 else:
                     new_test += i
             tmp_test = new_test
-
+            # 这里构造出来的代码是添加了一些库，然后将待测试的代码放到def code()方法体内
             sol += tmp_test
             if debug:
                 print(f"sol = {sol}")
@@ -508,6 +508,8 @@ def run_test(prob_path: str = None, problem_list: List[str] = None, prob_index: 
                 except Exception as e:
                     if error_queue is not None:
                         error_queue.put(e)
+                    import time
+                    print(test)
                     print(f"Failed check6 exception = {e}")
 
                 if tmp_result == True and debug:

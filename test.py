@@ -164,6 +164,38 @@ def extract(s):
     temp = re.findall(pattern, s, re.DOTALL)
     complete_code = "\n".join(temp)
     print(complete_code)
-extract(_input)
+# extract(_input)
 
 
+def check_tracks(kefa_distances, sasha_distances):
+    n = len(kefa_distances)
+    if n != len(sasha_distances):
+        return "NO"
+
+    for i in range(n):
+        if kefa_distances[i] != sasha_distances[n - i - 1]:
+            return "NO"
+
+    return "YES"
+
+
+kefa_distances = [2, 4, 6]
+sasha_distances = [1, 5, 7]
+print(check_tracks(kefa_distances, sasha_distances))
+
+
+# def check_tracks(kefa_distances, sasha_distances):
+#     n = len(kefa_distances)
+#     if n != len(sasha_distances):
+#         return "NO"
+#
+#     for i in range(n):
+#         if kefa_distances[i] != sasha_distances[n - i - 1]:
+#             return "NO"
+#
+#     return "YES"
+#
+#
+# kefa_distances = [2, 4, 6]
+# sasha_distances = [1, 5, 7]
+# print(check_tracks(kefa_distances, sasha_distances))
