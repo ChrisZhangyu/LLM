@@ -38,7 +38,10 @@ class ProgramEnv(ABC):
     """
 
     def transition(self, s, a, is_model_dynamic=True):
-        next_state = s + [a]
+        if isinstance(a, list):
+            next_state = s + a
+        else:
+            next_state = s + [a]
 
         # 如果a是终止符，或者超过最大长度就停止
         if a == self.terminal_token or len(next_state) == self.horizon:

@@ -49,12 +49,14 @@ def generate_apps_prompt(args, test_case_path, prompt_path, solutions_path, toke
     import re
     llama_pattern = re.compile(r'.*llama.*', re.IGNORECASE)
     if llama_pattern.match(type(tokenizer).__name__):
-        instruct = f'''You are a code expert.You will be given the problem description. You can only generate code and comments to solve the QUESTION.Your code will be tested so you don't have to run it yourself.You will have several chances to generate code for the same problem, each time  you will be given the errors of the previous code and you should revise your previous code according to the errors.'''
+        instruct = f'''You are a code expert.You will be given the problem description below QUESTION.You need to generate code to solve the QUESTION.Your code will be tested so don't test yourself, but make sure your code reads the input and prints the output correctly.Tests are performed through standard input and output, so your code must have something to read the input and print the result.You will have several chances to generate code for the same problem.If your previous code have errors, you should revise your code.Sometimes some code snippets are given, you need to complete it or you can rewrite the code to ensure that it can solve the problem without errors.The following are the format requirements of the code\n-----FORMAT-----:\n```python\nthe code to read input\nthe code to solve problem\nthe code to print result\n```'''
+
         _input = instruct + _input
         add_answer = False
 
     with open(prompt_path, "r", encoding="utf-8") as f:
         data = f.readlines()
+        data = [item for item in data if item != '\n']
         data = "".join(data)
     _input += data
     if starter_path != None:
@@ -74,10 +76,14 @@ def generate_apps_prompt(args, test_case_path, prompt_path, solutions_path, toke
     else:
         _input += "\nUse Call-Based format"  # \n"
 
-    _input += "\n-----PREVIOUS CODE-----:"
-    _input += "\n-----EXCEPTION FROM YOUR PREVIOUS CODE-----:"
-    _input += "ANSWER:\n"
-    prompt_template = f'''### Human: {_input}\n### Assistant:'''
+    # _input += "\n-----PREVIOUS CODE-----:\n"
+    # _input += "\n-----EXCEPTION FROM YOUR PREVIOUS CODE-----:\n"
+    # llama_gptq_70b
+    # prompt_template = f'''### Human: {_input}\n### Assistant:'''
+    # code_llama
+    prompt_template = f'''[INST] {_input}\n[/INST]'''
+    _input += "\nANSWER:\n"
+
     _input = prompt_template
     if args.peeking > 0.0:
         # Need to do some peeking.

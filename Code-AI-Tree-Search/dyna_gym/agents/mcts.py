@@ -177,6 +177,7 @@ def mcts_procedure(ag, tree_policy, env, done, root = None, rollout_weight = 1.,
                     estimate, reflexion_error = env.get_reward(state)
                     # save this information for demo
                     node.info['complete_program'] = state
+
                     ag.dp.feedback = reflexion_error
             else:
                 # the rewards are defined on terminating actions, the terminal states have no rewards

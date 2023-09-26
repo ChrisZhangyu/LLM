@@ -2,8 +2,9 @@ import logging
 import time
 import warnings
 from abc import abstractmethod
+import random
 from typing import Optional, Union
-
+import re
 import torch
 import numpy as np
 
@@ -99,7 +100,6 @@ class APPSHeuristic(DefaultPolicyHeuristic):
         self.feedback = "None error"
         self.previous_code = ""
 
-
     def get_short_horizon_sequence(self, state):
         """
         Returns:
@@ -140,6 +140,10 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             # 找到exception字段
             if exception_str in input_prompt:
                 input_prompt_list = input_prompt.split(exception_str)
+                match = re.search(r'line (\d+)', self.feedback)
+                if match is not None:
+                    line_number = int(match.group(1)) - 18
+                    self.feedback = re.sub(r'line \d+', f'line {line_number}', self.feedback)
                 input_prompt = input_prompt_list[0] + f"\n{exception_str}\n{self.feedback}\n" + input_prompt_list[1]
 
             # 如果有previous_str，说明需要之前的code
@@ -152,17 +156,19 @@ class APPSHeuristic(DefaultPolicyHeuristic):
                     code = self.tokenizer.decode(node.parent.parent.state)
                 else:
                     # if isinstance(self.previous_code, str):
+                    # code = "There is no code please generate new code" if len(self.previous_code) == 0 else self.previous_code
                     code = self.previous_code
                     # else:
                     #     code = self.tokenizer.decode(self.previous_code)
                 input_prompt = input_prompt_list[0] + f"\n{previous_str}\n{code}\n" + input_prompt_list[1]
-
+            # if self.feedback != "None error":
+            #     reflexion = self.get_reflexion_prompt()
             encoded_ids = self.tokenizer.encode(input_prompt)
             input_ids = torch.LongTensor(encoded_ids).unsqueeze(0).to(self.device)
 
             start_time = time.time()
             sample_mode = (self.ts_mode == 'sample')
-
+            # torch.cuda.empty_cache()
             model_output = self.model.generate(
                 inputs=input_ids,
                 top_k=self.k,
@@ -210,7 +216,7 @@ class APPSHeuristic(DefaultPolicyHeuristic):
                 print(self.env.convert_state_to_program(output_ids))
                 print('===========================')
             temp_code = self.env.convert_state_to_program(output_ids)
-            self.previous_code = temp_code if temp_code else self.previous_code
+            self.previous_code = temp_code if temp_code else "There is no previous code"
             return output_ids
 
     def get_value(self, state):
@@ -245,13 +251,22 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             encoded_ids = state
             input_ids = torch.LongTensor(encoded_ids).unsqueeze(0).to(self.device)
             start_time = time.time()
+            # 段级蒙特卡洛
+            # node_length = 6
+
+            # 随机长度
+            # node_length = random.randint(3, 10)
+            #
+            node_length = 1
+
             # 将state作为输入传入模型，生成k个最可能的字符, generate方法有待研究
+
             model_output = self.model.generate(
                 inputs=input_ids,
                 top_k=self.k,
                 num_beams=self.num_beams,
                 early_stopping=True,
-                max_new_tokens=1,
+                max_new_tokens=node_length,
                 return_dict_in_generate=True,
                 output_scores=True,
                 use_cache=True,
@@ -259,11 +274,24 @@ class APPSHeuristic(DefaultPolicyHeuristic):
             # debug模式下会打印模型的运行时间
             logging.info('generate top-k time: ' + str(time.time() - start_time))
             # model_output的数据类型有待考证。根据代码推测，模型的输出包括token本身及token的score
-            top_k_scores, top_k_tokens = torch.topk(model_output.scores[0][0], k=self.k, sorted=True)
-            # 对score归一化
-            top_k_scores = torch.softmax(top_k_scores, dim=-1)
-
-            return top_k_tokens.tolist(), top_k_scores.tolist()
+            if node_length > 1:
+                # model_output.scores的维度为(10, 3, 32000)中间那个3代表了num_beams。源代码每次都选择num_beams的第一个，
+                # 而后从词典中(即32000的维度上)选出概率最高的3个
+                # 这里的temp_list是长度为10的list，每个list的项是一个(2, 3, 3)的tensor。第一个(1, 3, 3)是3个beam中每个beam的top3最大的token的scores值，
+                # 第二个(1, 3, 3)是3个beam中每个beam的top3最大的token的id值，
+                # 最后要组成2个(10, 3)的list，根据源代码，每次都选择3个beam分支的第一个
+                temp_list = [torch.topk(item, k=self.k, sorted=True, dim=1) for item in model_output.scores]
+                top_k_scores = [item[0][0] for item in temp_list]
+                top_k_tokens = [item[1][0] for item in temp_list]
+                # 对score求平均并归一化
+                top_k_scores = torch.softmax(torch.stack(top_k_scores, dim=0).sum(dim=0) / node_length, dim=0)
+                top_k_tokens = torch.stack(top_k_tokens, dim=0).T
+                return top_k_tokens.tolist(), top_k_scores
+            else:
+                top_k_scores, top_k_tokens = torch.topk(model_output.scores[0][0], k=self.k, sorted=True)
+                # 对score归一化
+                top_k_scores = torch.softmax(top_k_scores, dim=-1)
+                return top_k_tokens.tolist(), top_k_scores.tolist()
 
     def clean_up(self, new_state):
         if self.use_seq_cache:
@@ -273,29 +301,31 @@ class APPSHeuristic(DefaultPolicyHeuristic):
         if self.top_k_cache_steps > 0:
             self.top_k_cache.clear(new_state)
 
-    def get_input_with_reflexion_prompt(self,
-                                        state,
-                                        feedback="",
-                                        ):
-        prev_func_impl = self.seq_cache.get(reflexion=True)
-        import reflexion_prompt as prompt
-        feedback = self.tokenizer.decode(feedback[0])
+    def get_reflexion_prompt(self
+                             ,
+                             ):
 
-        self_reflection_input = prompt.PY_SELF_REFLECTION_CHAT_INSTRUCTION_V2 + f'\n\n[function impl]:\n{prev_func_impl}\n\n[unit test results]:\n{feedback}\n\n[self-reflection]:'
-        with open("self_reflection_input.txt", "w") as f:
-            f.write(self_reflection_input)
-        self_reflection_input = self.tokenizer.encode(self_reflection_input, return_tensors="pt").to(self.model.device)
-        self_reflection = self.model.generate(self_reflection_input, max_new_tokens=1024, use_cache=True)
-        #   解码成字符串
-        self_reflection = self.tokenizer.decode(self_reflection[0])
+        reflexion_instruct = f'''### Human:\n[PREVIOUS CODE]:\n{self.previous_code} \n[EXCEPTION FROM YOUR PREVIOUS CODE]:\n{self.feedback}\n\nThe above is the code you generated last time, as well as the errors it generated and the pass rate on the test cases.Please provide suggestions for modification, dont provide code.\n'''
+        _input = reflexion_instruct + "\n### Assistant:"
+        input_ids = self.tokenizer.encode(_input)
 
-        final_input = f"[previous impl]:\n{prev_func_impl}\n\n[unit test results from previous " \
-                      f"impl]:\n{feedback}\n\n[reflection on previous impl]:\n{self_reflection}\n\n[partial code you have generated]{state}[improve" \
-                      f"d impl]"
+        input_ids = torch.LongTensor(input_ids).unsqueeze(0).to(self.device)
 
-        with open("self_reflection_output.txt", "w") as f:
-            f.write(self_reflection)
+        sample_mode = (self.ts_mode == 'sample')
 
-        final_input = self.tokenizer.encode(final_input, return_tensors="pt").to(self.model.device)
+        model_output = self.model.generate(
+            inputs=input_ids,
+            top_k=self.k,
+            num_beams=(1 if sample_mode else self.num_beams),  # if sampling enabled, beam should always be 1
+            num_return_sequences=self.num_beams,
+            do_sample=sample_mode,
+            early_stopping=True,
+            return_dict_in_generate=True,
+            output_hidden_states=True,
+            output_scores=True,
+            max_new_tokens=512,
+            use_cache=True  # huggingface default cache is always enabled
+        )
+        reflexion = self.tokenizer.decode(model_output[0][0])
 
-        return final_input
+        return reflexion

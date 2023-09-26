@@ -50,7 +50,7 @@ def timeout_handler(signum, frame):
 
 # linux下这个才不会出错,定义了出现SIGALRM信号时的处理方法,SIGALRM是一个计时器信号
 signal.signal(signal.SIGALRM, timeout_handler)
-timeout = 4  # seconds
+timeout = 2  # seconds
 
 
 # used to capture stdout as a list

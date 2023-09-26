@@ -190,7 +190,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--arch", default="chatGLM", choices=transformers.GPT2_PRETRAINED_MODEL_ARCHIVE_LIST)
-    parser.add_argument("-l", "--load", default="../../../../autodl-fs/model/llama_2_70b_qlora_gptq", type=str)
+    parser.add_argument("-l", "--load", default="../../../../autodl-fs/model/code_llama_34b_instruct_gptq", type=str)
     parser.add_argument("--load-value", default=None, type=str, help="An optional value function for evaluating partial programs.")
     parser.add_argument("-t","--test-loc", default="../data_split/test.json", type=str, help="This file specifies the locations of the test set of the code dataset.")
     parser.add_argument("--width", default=3, type=int, help="The maximum number of children for any node.")
@@ -234,7 +234,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--dataset", default="apps", type=str, choices=["apps"])
     parser.add_argument("-i", "--index", default=None, type=int)
-    parser.add_argument("-s","--start", default=30, type=int)
+    parser.add_argument("-s","--start", default=0, type=int)
     parser.add_argument("-e","--end", default=100, type=int)
     parser.add_argument("--indices", default=None, type=str)
 

@@ -28,7 +28,7 @@ def check_correctness(prob_path, output_str, mode, public_test_cases):
     # 创建子进程, target是要执行的函数，args是待执行函数所需要的参数
     p = multiprocessing.Process(target=_temp_run, args=(prob_path, output_str, mode, public_test_cases, result, error_queue))
     p.start()
-    p.join(timeout=10)
+    p.join(timeout=30)
     # 这里可以捕获异常，加入reflexion的方法
     reflexion_error = "None error"
     # print(f"error_queue: {not error_queue.empty()}")
@@ -37,6 +37,7 @@ def check_correctness(prob_path, output_str, mode, public_test_cases):
     # print(f"test error: {reflexion_error}")
     if p.is_alive():
         p.kill()
+        reflexion_error = "Some test cases exceeded time limit"
     if not result:
         # Reamark: ideally we would consider that all tests failed but we can't access number of tests here easily
         # so we use 21=the average number of tests for a smaple in the test split instead
